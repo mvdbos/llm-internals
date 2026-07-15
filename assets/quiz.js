@@ -2,6 +2,7 @@
   "use strict";
 
   const optionLabel = (option) => option.textContent.trim();
+  const asSentence = (text) => (/[^\s][.!?]$/.test(text) ? text : `${text}.`);
   const explanation = (option) =>
     option.dataset.explanation || "This option does not match the evidence in the lesson.";
 
@@ -42,7 +43,7 @@
     } else {
       selected.classList.add("incorrect");
       selected.setAttribute("aria-label", `${optionLabel(selected)} — selected, incorrect`);
-      feedback.textContent = `Not quite. ${explanation(selected)} Correct answer: ${optionLabel(correct)}. ${explanation(correct)}`;
+      feedback.textContent = `Not quite. ${explanation(selected)} Correct answer: ${asSentence(optionLabel(correct))} ${explanation(correct)}`;
     }
 
     reset.hidden = quiz.dataset.retry !== "true";

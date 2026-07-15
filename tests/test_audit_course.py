@@ -133,6 +133,99 @@ class CourseAuditTests(unittest.TestCase):
             self.assertIn("manifest-lesson-missing", strict_codes)
             self.assertNotIn("manifest-lesson-missing", migration_codes)
 
+    def test_reports_glossary_term_without_id(self):
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "reference").mkdir()
+            (root / "reference" / "glossary.html").write_text(
+                "<dl><dt>Tensor</dt><dd>A grid of numbers.</dd></dl>",
+                encoding="utf-8",
+            )
+            codes = {issue.code for issue in audit_workspace(root)}
+            self.assertIn("glossary-term-missing-id", codes)
+
+    def test_reports_shared_glossary_term_anchor(self):
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "reference").mkdir()
+            (root / "reference" / "glossary.html").write_text(
+                '<dl><dt id="T">Tensor</dt><dt id="T">Token</dt></dl>',
+                encoding="utf-8",
+            )
+            codes = {issue.code for issue in audit_workspace(root)}
+            self.assertIn("glossary-anchor-shared", codes)
+
+    def test_reports_duplicate_inline_glossary_target(self):
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "reference").mkdir()
+            (root / "lessons").mkdir()
+            (root / "reference" / "glossary.html").write_text(
+                '<dl><dt id="tensor">Tensor</dt></dl>',
+                encoding="utf-8",
+            )
+            (root / "lessons" / "one.html").write_text(
+                '<a class="glossary-link" href="../reference/glossary.html#tensor">Tensor</a>'
+                '<a class="glossary-link" href="../reference/glossary.html#tensor">tensor</a>',
+                encoding="utf-8",
+            )
+            codes = {issue.code for issue in audit_workspace(root)}
+            self.assertIn("glossary-link-duplicate", codes)
+
+    def test_reports_inline_glossary_target_missing_from_footer(self):
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "reference").mkdir()
+            (root / "lessons").mkdir()
+            (root / "reference" / "glossary.html").write_text(
+                '<dl><dt id="tensor">Tensor</dt></dl>',
+                encoding="utf-8",
+            )
+            (root / "lessons" / "one.html").write_text(
+                '<a class="glossary-link" href="../reference/glossary.html#tensor">Tensor</a>'
+                '<div class="terms-footer"></div>',
+                encoding="utf-8",
+            )
+            codes = {issue.code for issue in audit_workspace(root)}
+            self.assertIn("glossary-footer-missing", codes)
+
+    def test_reports_footer_glossary_target_missing_inline(self):
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "reference").mkdir()
+            (root / "lessons").mkdir()
+            (root / "reference" / "glossary.html").write_text(
+                '<dl><dt id="tensor">Tensor</dt></dl>',
+                encoding="utf-8",
+            )
+            (root / "lessons" / "one.html").write_text(
+                '<div class="terms-footer">'
+                '<a href="../reference/glossary.html#tensor">Tensor</a>'
+                "</div>",
+                encoding="utf-8",
+            )
+            codes = {issue.code for issue in audit_workspace(root)}
+            self.assertIn("glossary-footer-extra", codes)
+
+    def test_reports_glossary_link_to_letter_heading_instead_of_term(self):
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "reference").mkdir()
+            (root / "lessons").mkdir()
+            (root / "reference" / "glossary.html").write_text(
+                '<h2 id="T">T</h2><dl><dt id="tensor">Tensor</dt></dl>',
+                encoding="utf-8",
+            )
+            (root / "lessons" / "one.html").write_text(
+                '<a class="glossary-link" href="../reference/glossary.html#T">Tensor</a>'
+                '<div class="terms-footer">'
+                '<a href="../reference/glossary.html#T">Tensor</a>'
+                "</div>",
+                encoding="utf-8",
+            )
+            codes = {issue.code for issue in audit_workspace(root)}
+            self.assertIn("glossary-target-not-term", codes)
+
 
 if __name__ == "__main__":
     unittest.main()

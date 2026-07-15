@@ -25,12 +25,16 @@ class _PageParser(HTMLParser):
         self.ids: list[str] = []
         self.hrefs: list[str] = []
         self.anchors: list[tuple[str, str]] = []
+        self.glossary_hrefs: list[str] = []
+        self.footer_hrefs: list[str] = []
+        self.dt_ids: list[str | None] = []
         self.title_parts: list[str] = []
         self.h1_parts: list[str] = []
         self._capture_title = False
         self._capture_h1 = False
         self._anchor_href: str | None = None
         self._anchor_parts: list[str] = []
+        self._footer_depth = 0
 
     @property
     def title_text(self) -> str:
@@ -42,8 +46,15 @@ class _PageParser(HTMLParser):
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         values = dict(attrs)
+        classes = set((values.get("class") or "").split())
+        if self._footer_depth:
+            self._footer_depth += 1
+        elif "terms-footer" in classes:
+            self._footer_depth = 1
         if values.get("id"):
             self.ids.append(values["id"] or "")
+        if tag == "dt":
+            self.dt_ids.append(values.get("id"))
         if tag == "title":
             self._capture_title = True
         elif tag == "h1":
@@ -51,6 +62,10 @@ class _PageParser(HTMLParser):
         elif tag == "a" and values.get("href"):
             href = values["href"] or ""
             self.hrefs.append(href)
+            if "glossary-link" in classes:
+                self.glossary_hrefs.append(href)
+            if self._footer_depth:
+                self.footer_hrefs.append(href)
             self._anchor_href = href
             self._anchor_parts = []
 
@@ -72,6 +87,8 @@ class _PageParser(HTMLParser):
             self.anchors.append((self._anchor_href, text))
             self._anchor_href = None
             self._anchor_parts = []
+        if self._footer_depth:
+            self._footer_depth -= 1
 
 
 def _parse_page(path: Path) -> _PageParser:
@@ -153,8 +170,79 @@ def audit_workspace(root: Path, *, allow_planned_lessons: bool = False) -> list[
     parsed_pages = {page.resolve(): _parse_page(page) for page in pages}
     issues: list[Issue] = []
 
+    glossary_path = (root / "reference" / "glossary.html").resolve()
+    glossary = parsed_pages.get(glossary_path)
+    if glossary:
+        for position, term_id in enumerate(glossary.dt_ids, start=1):
+            if not term_id:
+                issues.append(
+                    Issue(
+                        "glossary-term-missing-id",
+                        Path("reference/glossary.html"),
+                        f"glossary <dt> number {position} has no id",
+                    )
+                )
+        for term_id, count in Counter(glossary.dt_ids).items():
+            if term_id and count > 1:
+                issues.append(
+                    Issue(
+                        "glossary-anchor-shared",
+                        Path("reference/glossary.html"),
+                        f"glossary term id {term_id!r} is shared by {count} entries",
+                    )
+                )
+
     for source in pages:
         source_resolved = source.resolve()
+        glossary_targets = [
+            target
+            for href in parsed_pages[source_resolved].glossary_hrefs
+            if (target := _local_target(source_resolved, href)) is not None
+        ]
+        footer_targets = {
+            target
+            for href in parsed_pages[source_resolved].footer_hrefs
+            if (target := _local_target(source_resolved, href)) is not None
+        }
+        glossary_term_ids = set(glossary.dt_ids) if glossary else set()
+        for target_path, fragment in sorted(
+            set(glossary_targets), key=lambda item: (str(item[0]), item[1])
+        ):
+            if target_path == glossary_path and fragment not in glossary_term_ids:
+                issues.append(
+                    Issue(
+                        "glossary-target-not-term",
+                        source.relative_to(root),
+                        f"glossary link targets non-term fragment {fragment!r}",
+                    )
+                )
+        missing_footer_targets = set(glossary_targets) - footer_targets
+        for target in sorted(missing_footer_targets, key=lambda item: (str(item[0]), item[1])):
+            issues.append(
+                Issue(
+                    "glossary-footer-missing",
+                    source.relative_to(root),
+                    f"inline glossary target {target[1]!r} is missing from terms footer",
+                )
+            )
+        extra_footer_targets = footer_targets - set(glossary_targets)
+        for target in sorted(extra_footer_targets, key=lambda item: (str(item[0]), item[1])):
+            issues.append(
+                Issue(
+                    "glossary-footer-extra",
+                    source.relative_to(root),
+                    f"terms footer target {target[1]!r} has no inline glossary link",
+                )
+            )
+        for target, count in Counter(glossary_targets).items():
+            if count > 1:
+                issues.append(
+                    Issue(
+                        "glossary-link-duplicate",
+                        source.relative_to(root),
+                        f"glossary target {target[1]!r} is linked {count} times inline",
+                    )
+                )
         for element_id, count in Counter(parsed_pages[source_resolved].ids).items():
             if count > 1:
                 issues.append(

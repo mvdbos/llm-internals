@@ -1,24 +1,24 @@
-# Learning Record 0003: Quantization in Practice
+# Learning Record 0003: Choosing the Right Quantization
 
 **Date:** 2026-07-13
 **Lesson:** [0003-quantization-in-practice.html](../lessons/0003-quantization-in-practice.html)
 
 ## What was learned
 
-- Deep-SWE benchmarks quantified the bf16 vs 8-bit gap: 74 steps (bf16) vs 116 steps (8-bit) — a 57% increase
-- The root cause isn't slower per-step processing but systematic thought duplication (unique/total thoughts ratio < 1.0)
-- Thinking budget doesn't fix quantization degradation — it gives more tokens for fuzzy thoughts, not better thoughts
-- Precision sensitivity is task-dependent: creative writing (low) < factual recall (low) < pattern matching (medium) < multi-step reasoning (high) < long-horizon planning (very high)
+- Quant selection is a 3-axis problem: task type, hardware budget, model size
+- Task precision sensitivity spectrum: creative writing (low) → agentic coding (very high)
+- Hardware headroom matters: target ≤70% of available RAM for the model
+- Larger models tolerate more aggressive quantization — a 35B at Q4 may beat a 27B at Q8
+- The KV cache snowball: quantization noise compounds across long agentic loops
+- Thinking budget doesn't compensate for fuzzy weights — more tokens ≠ better thoughts
 
 ## Key insights
 
-- For agentic workloads, quantization cost compounds: each slightly-worse thought leads to more correction steps, which adds more context, which makes subsequent thoughts even noisier
-- The 35B question: larger models tolerate more aggressive quantization. A 35B at Q4 might beat a 27B at Q8 for reasoning — the extra parameters compensate for fuzzier weights
-- A systematic approach: benchmark the SAME task across quants, compare steps + thought uniqueness, test 2-3 diverse tasks before committing
-- The step count difference (74 vs 116) is a concrete, measurable proxy for reasoning quality degradation
+- A systematic benchmarking method: same task × multiple quants, measure steps + output quality
+- The case study (27B model, bf16 vs 8-bit on coding tasks) showed 57% more steps with 8-bit due to thought duplication
+- Short conversations (5-10 turns) show almost no quality difference between Q8 and bf16 — degradation needs long contexts to become visible
 
 ## Zone of proximal development
 
-- Mastered: quant format selection, decision framework for different task types
-- Ready for: hands-on benchmarking, building a personal calibration curve for your models
-- Future: comparing across model sizes (27B vs 35B at different quants), oMLX-specific quantization parameters
+- Ready for: hands-on benchmarking with own models
+- Future: comparing model families (Llama vs Qwen vs DeepSeek at equivalent quants), inference engine differences (llama.cpp vs MLX vs vLLM)

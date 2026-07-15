@@ -23,18 +23,34 @@ class _PageParser(HTMLParser):
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
         self.ids: list[str] = []
+        self.tag_counts: Counter[str] = Counter()
         self.hrefs: list[str] = []
         self.anchors: list[tuple[str, str]] = []
         self.glossary_hrefs: list[str] = []
         self.footer_hrefs: list[str] = []
+        self.tables: list[dict[str, object]] = []
+        self.button_types: list[str | None] = []
+        self.quizzes: list[dict[str, object]] = []
+        self.script_srcs: list[str] = []
+        self.inline_script_parts: list[str] = []
+        self.course_nav_wrong_tags: list[str] = []
+        self.nav_groups: list[list[str]] = []
+        self.unexplained_overflow_waivers = 0
         self.dt_ids: list[str | None] = []
         self.title_parts: list[str] = []
         self.h1_parts: list[str] = []
         self._capture_title = False
         self._capture_h1 = False
+        self._capture_inline_script = False
         self._anchor_href: str | None = None
         self._anchor_parts: list[str] = []
         self._footer_depth = 0
+        self._current_table: dict[str, object] | None = None
+        self._quiz_depth = 0
+        self._current_quiz: dict[str, object] | None = None
+        self._nav_depth = 0
+        self._current_nav: list[str] | None = None
+        self.is_redirect = False
 
     @property
     def title_text(self) -> str:
@@ -46,7 +62,63 @@ class _PageParser(HTMLParser):
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         values = dict(attrs)
+        self.tag_counts[tag] += 1
+        if "data-overflow-waiver" in values and not (
+            values.get("data-overflow-explanation") or ""
+        ).strip():
+            self.unexplained_overflow_waivers += 1
+        if tag == "body" and values.get("data-course-redirect") == "true":
+            self.is_redirect = True
+        if tag == "script":
+            if values.get("src"):
+                self.script_srcs.append(values["src"] or "")
+            else:
+                self._capture_inline_script = True
+        if tag == "table":
+            self._current_table = {
+                "caption": False,
+                "thead": False,
+                "tbody": False,
+                "th_scopes": [],
+            }
+            self.tables.append(self._current_table)
+        elif self._current_table is not None:
+            if tag in {"caption", "thead", "tbody"}:
+                self._current_table[tag] = True
+            elif tag == "th":
+                scopes = self._current_table["th_scopes"]
+                assert isinstance(scopes, list)
+                scopes.append(values.get("scope"))
         classes = set((values.get("class") or "").split())
+        if "course-nav" in classes and tag != "nav":
+            self.course_nav_wrong_tags.append(tag)
+        if self._nav_depth:
+            self._nav_depth += 1
+        elif tag == "nav":
+            self._nav_depth = 1
+            self._current_nav = []
+            self.nav_groups.append(self._current_nav)
+        if tag == "button":
+            self.button_types.append(values.get("type"))
+        if self._quiz_depth:
+            self._quiz_depth += 1
+        elif tag == "fieldset" and "data-quiz" in values:
+            self._quiz_depth = 1
+            self._current_quiz = {"correct": 0, "feedback_live": False}
+            self.quizzes.append(self._current_quiz)
+        if self._current_quiz is not None:
+            if (
+                tag == "button"
+                and "quiz-option" in classes
+                and values.get("data-correct") == "true"
+            ):
+                correct = self._current_quiz["correct"]
+                assert isinstance(correct, int)
+                self._current_quiz["correct"] = correct + 1
+            if "quiz-feedback" in classes and (
+                values.get("role") == "status" or values.get("aria-live") == "polite"
+            ):
+                self._current_quiz["feedback_live"] = True
         if self._footer_depth:
             self._footer_depth += 1
         elif "terms-footer" in classes:
@@ -66,6 +138,8 @@ class _PageParser(HTMLParser):
                 self.glossary_hrefs.append(href)
             if self._footer_depth:
                 self.footer_hrefs.append(href)
+            if self._current_nav is not None:
+                self._current_nav.append(href)
             self._anchor_href = href
             self._anchor_parts = []
 
@@ -74,6 +148,8 @@ class _PageParser(HTMLParser):
             self.title_parts.append(data)
         if self._capture_h1:
             self.h1_parts.append(data)
+        if self._capture_inline_script:
+            self.inline_script_parts.append(data)
         if self._anchor_href is not None:
             self._anchor_parts.append(data)
 
@@ -82,6 +158,8 @@ class _PageParser(HTMLParser):
             self._capture_title = False
         elif tag == "h1":
             self._capture_h1 = False
+        elif tag == "script":
+            self._capture_inline_script = False
         elif tag == "a" and self._anchor_href is not None:
             text = " ".join("".join(self._anchor_parts).split())
             self.anchors.append((self._anchor_href, text))
@@ -89,6 +167,16 @@ class _PageParser(HTMLParser):
             self._anchor_parts = []
         if self._footer_depth:
             self._footer_depth -= 1
+        if self._quiz_depth:
+            self._quiz_depth -= 1
+            if self._quiz_depth == 0:
+                self._current_quiz = None
+        if self._nav_depth:
+            self._nav_depth -= 1
+            if self._nav_depth == 0:
+                self._current_nav = None
+        if tag == "table":
+            self._current_table = None
 
 
 def _parse_page(path: Path) -> _PageParser:
@@ -123,7 +211,8 @@ def _audit_manifest(
     index_cards = dict(index.anchors) if index else {}
     issues: list[Issue] = []
 
-    for lesson in data.get("lessons", []):
+    lessons = data.get("lessons", [])
+    for position, lesson in enumerate(lessons):
         if allow_planned_lessons and lesson.get("status") == "planned":
             continue
         relative_path = Path(lesson["path"])
@@ -157,6 +246,30 @@ def _audit_manifest(
                     "manifest-duration-mismatch",
                     Path("index.html"),
                     f"{relative_path} should show ~{lesson['minutes']} min",
+                )
+            )
+
+        expected_nav_targets = {(root / "index.html").resolve()}
+        if position > 0:
+            expected_nav_targets.add((root / lessons[position - 1]["path"]).resolve())
+        if position + 1 < len(lessons):
+            expected_nav_targets.add((root / lessons[position + 1]["path"]).resolve())
+        nav_targets = []
+        for nav_group in page.nav_groups:
+            normalized = {
+                target[0]
+                for href in nav_group
+                if (target := _local_target(lesson_path, href)) is not None
+            }
+            nav_targets.append(normalized)
+        if len(nav_targets) != 2 or any(
+            targets != expected_nav_targets for targets in nav_targets
+        ):
+            issues.append(
+                Issue(
+                    "lesson-navigation-mismatch",
+                    relative_path,
+                    "top and bottom navigation must match manifest Previous/Home/Next targets",
                 )
             )
 
@@ -194,6 +307,98 @@ def audit_workspace(root: Path, *, allow_planned_lessons: bool = False) -> list[
 
     for source in pages:
         source_resolved = source.resolve()
+        page = parsed_pages[source_resolved]
+        if not page.is_redirect and page.tag_counts["main"] != 1:
+            issues.append(
+                Issue(
+                    "main-landmark-count",
+                    source.relative_to(root),
+                    f"expected exactly one <main>, found {page.tag_counts['main']}",
+                )
+            )
+        if not page.is_redirect:
+            if page.unexplained_overflow_waivers:
+                issues.append(
+                    Issue(
+                        "overflow-waiver-unexplained",
+                        source.relative_to(root),
+                        "overflow waiver requires data-overflow-explanation",
+                    )
+                )
+            if page.course_nav_wrong_tags:
+                issues.append(
+                    Issue(
+                        "navigation-not-nav",
+                        source.relative_to(root),
+                        "course-nav class must be placed on a <nav> element",
+                    )
+                )
+            for number, table in enumerate(page.tables, start=1):
+                for part in ("caption", "thead", "tbody"):
+                    if not table[part]:
+                        issues.append(
+                            Issue(
+                                f"table-missing-{part}",
+                                source.relative_to(root),
+                                f"table {number} has no <{part}>",
+                            )
+                        )
+                scopes = table["th_scopes"]
+                assert isinstance(scopes, list)
+                if any(
+                    scope not in {"col", "row", "colgroup", "rowgroup"}
+                    for scope in scopes
+                ):
+                    issues.append(
+                        Issue(
+                            "table-th-missing-scope",
+                            source.relative_to(root),
+                            f"table {number} has an unscoped <th>",
+                        )
+                    )
+            if any(button_type != "button" for button_type in page.button_types):
+                issues.append(
+                    Issue(
+                        "button-missing-type",
+                        source.relative_to(root),
+                        "every <button> must declare type=\"button\"",
+                    )
+                )
+            for number, quiz in enumerate(page.quizzes, start=1):
+                if quiz["correct"] != 1:
+                    issues.append(
+                        Issue(
+                            "quiz-correct-count",
+                            source.relative_to(root),
+                            f"quiz {number} has {quiz['correct']} correct options",
+                        )
+                    )
+                if not quiz["feedback_live"]:
+                    issues.append(
+                        Issue(
+                            "quiz-feedback-not-live",
+                            source.relative_to(root),
+                            f"quiz {number} feedback lacks role=status or aria-live=polite",
+                        )
+                    )
+            relative_source = source.relative_to(root)
+            if relative_source.parts and relative_source.parts[0] == "lessons":
+                if page.quizzes and "../assets/quiz.js" not in page.script_srcs:
+                    issues.append(
+                        Issue(
+                            "quiz-shared-script-missing",
+                            relative_source,
+                            "lesson quizzes must load ../assets/quiz.js",
+                        )
+                    )
+                if "checkAnswer" in "".join(page.inline_script_parts):
+                    issues.append(
+                        Issue(
+                            "quiz-inline-handler",
+                            relative_source,
+                            "lesson contains an inline checkAnswer implementation",
+                        )
+                    )
         glossary_targets = [
             target
             for href in parsed_pages[source_resolved].glossary_hrefs

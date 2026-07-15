@@ -226,6 +226,130 @@ class CourseAuditTests(unittest.TestCase):
             codes = {issue.code for issue in audit_workspace(root)}
             self.assertIn("glossary-target-not-term", codes)
 
+    def test_requires_exactly_one_main_on_non_redirect_page(self):
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "index.html").write_text(
+                "<html><body><h1>No main</h1></body></html>",
+                encoding="utf-8",
+            )
+            codes = {issue.code for issue in audit_workspace(root)}
+            self.assertIn("main-landmark-count", codes)
+
+    def test_requires_semantic_table_structure(self):
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "index.html").write_text(
+                "<main><table><tr><th>Heading</th><td>Value</td></tr></table></main>",
+                encoding="utf-8",
+            )
+            codes = {issue.code for issue in audit_workspace(root)}
+            self.assertTrue(
+                {
+                    "table-missing-caption",
+                    "table-missing-thead",
+                    "table-missing-tbody",
+                    "table-th-missing-scope",
+                }
+                <= codes
+            )
+
+    def test_requires_button_and_quiz_semantics(self):
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "index.html").write_text(
+                "<main>"
+                '<fieldset class="quiz-question" data-quiz>'
+                "<legend>Pick one</legend>"
+                '<button class="quiz-option" data-correct="true">A</button>'
+                '<button class="quiz-option" data-correct="true">B</button>'
+                '<p class="quiz-feedback"></p>'
+                "</fieldset>"
+                "</main>",
+                encoding="utf-8",
+            )
+            codes = {issue.code for issue in audit_workspace(root)}
+            self.assertTrue(
+                {
+                    "button-missing-type",
+                    "quiz-correct-count",
+                    "quiz-feedback-not-live",
+                }
+                <= codes
+            )
+
+    def test_requires_shared_quiz_script_and_forbids_inline_handler(self):
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "lessons").mkdir()
+            (root / "lessons" / "one.html").write_text(
+                "<main>"
+                '<fieldset data-quiz><legend>Pick</legend>'
+                '<button type="button" class="quiz-option" data-correct="true">A</button>'
+                '<p class="quiz-feedback" aria-live="polite"></p>'
+                "</fieldset>"
+                "<script>function checkAnswer() { return true; }</script>"
+                "</main>",
+                encoding="utf-8",
+            )
+            codes = {issue.code for issue in audit_workspace(root)}
+            self.assertTrue(
+                {"quiz-shared-script-missing", "quiz-inline-handler"} <= codes
+            )
+
+    def test_requires_course_navigation_to_use_nav_element(self):
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "index.html").write_text(
+                '<main><div class="course-nav"><a href="index.html">Home</a></div></main>',
+                encoding="utf-8",
+            )
+            codes = {issue.code for issue in audit_workspace(root)}
+            self.assertIn("navigation-not-nav", codes)
+
+    def test_manifest_requires_matching_top_and_bottom_lesson_navigation(self):
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "lessons").mkdir()
+            (root / "index.html").write_text(
+                '<main><a href="lessons/one.html">One · ~5 min.</a></main>',
+                encoding="utf-8",
+            )
+            (root / "lessons" / "one.html").write_text(
+                "<title>Lesson 1: One</title>"
+                '<nav class="course-nav"><a href="../index.html">Home</a></nav>'
+                "<main><h1>Lesson 1: One</h1></main>",
+                encoding="utf-8",
+            )
+            (root / "course.json").write_text(
+                json.dumps(
+                    {
+                        "title": "Course",
+                        "lessons": [
+                            {
+                                "number": 1,
+                                "path": "lessons/one.html",
+                                "title": "One",
+                                "minutes": 5,
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            codes = {issue.code for issue in audit_workspace(root)}
+            self.assertIn("lesson-navigation-mismatch", codes)
+
+    def test_rejects_unexplained_overflow_waiver(self):
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "index.html").write_text(
+                '<main data-overflow-waiver="true">Content</main>',
+                encoding="utf-8",
+            )
+            codes = {issue.code for issue in audit_workspace(root)}
+            self.assertIn("overflow-waiver-unexplained", codes)
+
 
 if __name__ == "__main__":
     unittest.main()

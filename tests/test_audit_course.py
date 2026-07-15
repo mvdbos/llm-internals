@@ -133,6 +133,88 @@ class CourseAuditTests(unittest.TestCase):
             self.assertIn("manifest-lesson-missing", strict_codes)
             self.assertNotIn("manifest-lesson-missing", migration_codes)
 
+    def test_planned_lesson_does_not_extend_published_navigation_in_migration_mode(self):
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "lessons").mkdir()
+            (root / "index.html").write_text(
+                '<main><h1>Course</h1><a href="lessons/one.html">One · ~5 min</a></main>',
+                encoding="utf-8",
+            )
+            lesson_html = (
+                '<title>One</title><nav class="course-nav"><a href="../index.html">Home</a></nav>'
+                '<main><h1>One</h1></main>'
+                '<nav class="course-nav"><a href="../index.html">Home</a></nav>'
+            )
+            (root / "lessons" / "one.html").write_text(
+                lesson_html, encoding="utf-8"
+            )
+            (root / "course.json").write_text(
+                json.dumps(
+                    {
+                        "title": "Course",
+                        "lessons": [
+                            {
+                                "number": 1,
+                                "path": "lessons/one.html",
+                                "title": "One",
+                                "minutes": 5,
+                            },
+                            {
+                                "number": 2,
+                                "path": "lessons/planned.html",
+                                "title": "Planned",
+                                "minutes": 8,
+                                "status": "planned",
+                            },
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            migration_codes = {
+                issue.code
+                for issue in audit_workspace(root, allow_planned_lessons=True)
+            }
+            self.assertNotIn("lesson-navigation-mismatch", migration_codes)
+
+    def test_manifest_duration_uses_course_card_when_path_is_linked_more_than_once(self):
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "lessons").mkdir()
+            (root / "index.html").write_text(
+                '<main><h1>Course</h1>'
+                '<a href="lessons/one.html">One · ~5 min</a>'
+                '<a href="lessons/one.html">Start lesson</a></main>',
+                encoding="utf-8",
+            )
+            lesson_html = (
+                '<title>One</title><nav class="course-nav"><a href="../index.html">Home</a></nav>'
+                '<main><h1>One</h1></main>'
+                '<nav class="course-nav"><a href="../index.html">Home</a></nav>'
+            )
+            (root / "lessons" / "one.html").write_text(
+                lesson_html, encoding="utf-8"
+            )
+            (root / "course.json").write_text(
+                json.dumps(
+                    {
+                        "title": "Course",
+                        "lessons": [
+                            {
+                                "number": 1,
+                                "path": "lessons/one.html",
+                                "title": "One",
+                                "minutes": 5,
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            codes = {issue.code for issue in audit_workspace(root)}
+            self.assertNotIn("manifest-duration-mismatch", codes)
+
     def test_reports_glossary_term_without_id(self):
         with TemporaryDirectory() as tmp:
             root = Path(tmp)

@@ -208,13 +208,22 @@ def _audit_manifest(
 
     data = json.loads(manifest_path.read_text(encoding="utf-8"))
     index = parsed_pages.get((root / "index.html").resolve())
-    index_cards = dict(index.anchors) if index else {}
+    index_cards: dict[str, str] = {}
+    if index:
+        for href, text in index.anchors:
+            if href not in index_cards or re.search(
+                r"~\s*\d+\s*min", text, flags=re.IGNORECASE
+            ):
+                index_cards[href] = text
     issues: list[Issue] = []
 
     lessons = data.get("lessons", [])
-    for position, lesson in enumerate(lessons):
-        if allow_planned_lessons and lesson.get("status") == "planned":
-            continue
+    published_lessons = [
+        lesson
+        for lesson in lessons
+        if not (allow_planned_lessons and lesson.get("status") == "planned")
+    ]
+    for position, lesson in enumerate(published_lessons):
         relative_path = Path(lesson["path"])
         lesson_path = (root / relative_path).resolve()
         if lesson_path not in parsed_pages:
@@ -251,9 +260,13 @@ def _audit_manifest(
 
         expected_nav_targets = {(root / "index.html").resolve()}
         if position > 0:
-            expected_nav_targets.add((root / lessons[position - 1]["path"]).resolve())
-        if position + 1 < len(lessons):
-            expected_nav_targets.add((root / lessons[position + 1]["path"]).resolve())
+            expected_nav_targets.add(
+                (root / published_lessons[position - 1]["path"]).resolve()
+            )
+        if position + 1 < len(published_lessons):
+            expected_nav_targets.add(
+                (root / published_lessons[position + 1]["path"]).resolve()
+            )
         nav_targets = []
         for nav_group in page.nav_groups:
             normalized = {

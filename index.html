@@ -3,87 +3,74 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LLM Internals — A Practical Course</title>
+<meta name="description" content="A practical, evidence-aware course for understanding model dataflow, quantization mechanics, implementation formats, and controlled evaluation.">
+<title>LLM Internals for Quantization Decisions</title>
 <link rel="stylesheet" href="assets/style.css">
 <style>
-  .hero { margin: 2rem 0 2.5rem; }
-  .hero h1 { font-size: 2.2rem; margin-bottom: 0.3rem; }
-  .hero p { color: var(--muted); font-size: 1.1rem; }
-  .toc { margin: 2rem 0; }
-  .toc-item {
-    display: block;
-    padding: 0.75rem 1rem;
-    margin: 0.5rem 0;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    text-decoration: none;
-    color: inherit;
-    transition: background 0.15s;
-  }
-  .toc-item:hover { background: #f5f5f5; text-decoration: none; }
-  .toc-item .num { color: var(--accent); font-weight: 600; margin-right: 0.5rem; }
-  .toc-item .desc { color: var(--muted); font-size: 0.9rem; margin-top: 0.15rem; }
-  .toc-item.ref { background: #fafafa; }
-  .toc-item.ref:hover { background: #f0f0f0; }
+.hero { margin: 2rem 0 2.5rem; }
+.hero h1 { margin-bottom: .3rem; font-size: clamp(2rem, 6vw, 2.7rem); }
+.hero p { color: var(--muted); font-size: 1.05rem; }
+.toc { margin: 1rem 0 2.25rem; }
+.toc-item { display: block; margin: .6rem 0; padding: .9rem 1rem; border: 1px solid var(--border); border-radius: 6px; color: inherit; text-decoration: none; }
+a.toc-item:hover { background: #f5f5f5; text-decoration: none; }
+.toc-item .num { margin-right: .5rem; color: var(--accent); font-weight: 600; }
+.toc-item .desc { margin-top: .25rem; color: var(--muted); font-size: .92rem; }
+.toc-item.ref { background: #fafafa; }
+.toc-item.gated { border-left: 4px solid #9a6700; background: #fff8e6; }
+.status-label { display: inline-block; margin-left: .5rem; padding: .1rem .4rem; border-radius: 3px; background: #f3e3b3; color: #674600; font-size: .75rem; }
 </style>
 </head>
 <body>
+<div class="page-shell">
+<nav class="course-nav" aria-label="Course links"><a href="mission.html">Mission</a><a href="resources.html">Evidence ledger</a><a href="reference/glossary.html">Glossary</a></nav>
+<main>
+<header class="hero">
+<h1>LLM Internals for Quantization Decisions</h1>
+<p>Learn what is stored, what flows at runtime, what a quantization label actually identifies, and how to evaluate candidates without relying on universal quality rules.</p>
+<p><a href="lessons/0001-tensors-and-layers.html"><strong>Start Lesson 1 →</strong></a> · <a href="mission.html">Read the learner objective</a></p>
+</header>
 
-<div class="hero">
-  <h1>LLM Internals</h1>
-  <p>A practical course on tensors, layers, and quantization — built for making smarter local model decisions.</p>
-  <p><em>Designed and taught by an AI agent. <a href="mission.html">Read the mission →</a></em></p>
-</div>
-
-<h2>Lessons</h2>
-
+<section aria-labelledby="lessons-heading">
+<h2 id="lessons-heading">Lessons</h2>
 <div class="toc">
-  <a href="lessons/0001-tensors-and-layers.html" class="toc-item">
-    <span class="num">1.</span> <strong>Tensors, Parameters, and Runtime State</strong>
-    <div class="desc">Trace text to token selection, then separate parameters, activations, retained state, and runtime memory. ~14 min.</div>
-  </a>
-  <a href="lessons/0002-how-quantization-works.html" class="toc-item">
-    <span class="num">2.</span> <strong>How Quantization Actually Works</strong>
-    <div class="desc">A portable encode-store-decode round trip, metadata overhead, error metrics, and workload validation. ~14 min.</div>
-  </a>
-  <a href="lessons/0003-reading-quantization-formats.html" class="toc-item">
-    <span class="num">3.</span> <strong>Reading Quantization Formats</strong>
-    <div class="desc">Separate checkpoint, artifact, encoding, recipe, engine, backend, kernel, and hardware evidence. ~10 min.</div>
-  </a>
-  <a href="lessons/0004-measuring-quantization-quality.html" class="toc-item">
-    <span class="num">4.</span> <strong>Measuring Quantization Quality</strong>
-    <div class="desc">Design paired, repeated evaluations with controlled settings, explicit exclusions, and workload metrics. ~10 min.</div>
-  </a>
-  <a href="lessons/0003-quantization-in-practice.html" class="toc-item">
-    <span class="num">Draft.</span> <strong>Controlled comparison in progress</strong>
-    <div class="desc">The previous selection guide is retained for review but excluded from the recommended learner path while its evidence is rebuilt.</div>
-  </a>
+<a href="lessons/0001-tensors-and-layers.html" class="toc-item">
+<span class="num">1.</span><strong>Tensors, Parameters, and Runtime State</strong>
+<div class="desc">Trace text to token selection, calculate a small projection, and distinguish parameters, activations, retained state, and runtime memory. ~14 min.</div>
+</a>
+<a href="lessons/0002-how-quantization-works.html" class="toc-item">
+<span class="num">2.</span><strong>How Quantization Actually Works</strong>
+<div class="desc">Follow a portable encode–store–decode round trip, include metadata, and connect local approximation error to workload evidence. ~15 min.</div>
+</a>
+<a href="lessons/0003-reading-quantization-formats.html" class="toc-item">
+<span class="num">3.</span><strong>Reading Quantization Formats</strong>
+<div class="desc">Separate checkpoint, artifact, encoding, recipe, engine, backend, kernel, and hardware using versioned examples. ~14 min.</div>
+</a>
+<a href="lessons/0004-measuring-quantization-quality.html" class="toc-item">
+<span class="num">4.</span><strong>Measuring Quantization Quality</strong>
+<div class="desc">Design paired evaluations, choose task-valid metrics, preserve attrition, and reject unmatched comparisons. ~15 min.</div>
+</a>
+<article class="toc-item gated" aria-labelledby="lesson-five-title">
+<span class="num">5.</span><strong id="lesson-five-title">Choosing and Validating a Quant</strong><span class="status-label">Deferred</span>
+<div class="desc">This evidence-dependent capstone will be published only after the preregistered paired trials are resumed and analyzed. No pilot or historical observation is promoted as a recommendation.</div>
+</article>
 </div>
+<p><strong>Historical draft:</strong> the previous practical guide remains <a href="lessons/0003-quantization-in-practice.html">quarantined for audit history</a>; it is not part of the recommended learner path.</p>
+</section>
 
-<h2>Reference</h2>
-
+<section aria-labelledby="reference-heading">
+<h2 id="reference-heading">References and methods</h2>
 <div class="toc">
-  <a href="reference/glossary.html" class="toc-item ref">
-    <strong>📖 Glossary</strong>
-    <div class="desc">A-Z of every term: Attention, bf16, Embedding, K-quant, Perplexity, Tensor, Thought Duplication…</div>
-  </a>
-  <a href="reference/quantization-formats.html" class="toc-item ref">
-    <strong>📊 Quantization Formats</strong>
-    <div class="desc">Cheat sheet: every GGUF format, suffix decoder ring, memory formula, decision matrix.</div>
-  </a>
-  <a href="reference/tensors-and-layers.html" class="toc-item ref">
-    <strong>🧱 Tensors &amp; Layers</strong>
-    <div class="desc">Cheat sheet: tensor shapes, layer types, parameter distribution, memory formula.</div>
-  </a>
+<a href="reference/tensors-and-layers.html" class="toc-item ref"><strong>Tensors, dataflow, and runtime state</strong><div class="desc">Architecture-aware shapes, attention scope, weight memory, and retained-state formulas.</div></a>
+<a href="reference/quantization-formats.html" class="toc-item ref"><strong>Quantization artifacts, encodings, and runtimes</strong><div class="desc">Backend-first taxonomy with pinned GGUF/GGML, MLX, and oMLX scope.</div></a>
+<a href="reference/quantization-decision-checklist.html" class="toc-item ref"><strong>Five-step decision checklist</strong><div class="desc">Printable formulas, evidence template, paired-evaluation checks, red flags, and a worked generic decision.</div></a>
+<a href="reference/glossary.html" class="toc-item ref"><strong>Glossary</strong><div class="desc">Term-specific definitions for architecture, numeric formats, artifacts, runtime state, and evaluation.</div></a>
+<a href="resources.html" class="toc-item ref"><strong>Evidence ledger</strong><div class="desc">Canonical, explanatory, and community sources with revisions and claim scope.</div></a>
+<a href="case-study/protocol.md" class="toc-item ref"><strong>Preregistered comparison protocol</strong><span class="status-label">Execution deferred</span><div class="desc">The method is frozen; no trial result or recommendation is currently published.</div></a>
 </div>
-
-<h2>Resources</h2>
-
-<p><a href="resources.html">Curated list</a> of high-trust articles, videos, and communities for deeper learning.</p>
-
-<div class="lesson-footer">
-  <p>Built with Hermes Agent. <a href="https://github.com/mvdbos/llm-internals">Source on GitHub</a> · <a href="https://mvdbos.github.io/llm-internals/">Live site</a></p>
+</section>
+</main>
+<nav class="course-nav" aria-label="Footer"><a href="mission.html">Mission</a><a href="lessons/0001-tensors-and-layers.html">Start Lesson 1</a><a href="resources.html">Sources</a></nav>
+<footer class="lesson-footer"><p>Built with Hermes Agent. <a href="https://github.com/mvdbos/llm-internals">Source repository</a></p></footer>
 </div>
-
 </body>
 </html>

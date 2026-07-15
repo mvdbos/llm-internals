@@ -8,9 +8,9 @@
 <link rel="stylesheet" href="../assets/style.css">
 </head>
 <body>
-<nav class="course-nav" aria-label="Lesson navigation"><a href="0003-reading-quantization-formats.html">← Previous: Formats</a><a href="../index.html">Course home</a><a href="0005-choosing-and-validating-a-quant.html">Next: Decision and case study →</a></nav>
+<nav class="course-nav" aria-label="Lesson navigation"><a href="0003-reading-quantization-formats.html">← Previous: Formats</a><a href="../index.html">Course home</a></nav>
 <main>
-<p class="lesson-progress">Lesson 4 of 5 · ~10 min</p>
+<p class="lesson-progress">Lesson 4 of 4 published · ~15 min</p>
 <h1>Lesson 4: Measuring Quantization Quality</h1>
 <p>Format labels tell you what changed. They do not tell you whether the change matters for your workload. A useful evaluation compares matched conditions, measures accuracy and efficiency, and keeps explanations separate from observations.</p>
 
@@ -88,9 +88,9 @@
 </tbody>
 </table>
 </div>
-<p><strong>Intrinsic distribution measures:</strong> perplexity summarizes next-token predictive loss on a named corpus. KL divergence can compare a candidate next-token distribution <code>q</code> with a reference distribution <code>p</code>: <code>KL(p‖q) = Σ pᵢ log(pᵢ/qᵢ)</code>. Both are useful for detecting distribution change, but similar values do not prove equal chat, reasoning, safety, coding, or long-horizon agent behavior.</p>
+<p><strong>Intrinsic distribution measures:</strong> perplexity summarizes next-token predictive loss on a named corpus. <a href="../reference/glossary.html#kl-divergence" class="glossary-link">KL divergence</a> can compare a candidate next-token distribution <code>q</code> with a reference distribution <code>p</code>: <code>KL(p‖q) = Σ pᵢ log(pᵢ/qᵢ)</code>. Both are useful for detecting distribution change, but similar values do not prove equal chat, reasoning, safety, coding, or long-horizon agent behavior.</p>
 <p><strong>Downstream measures must match the workload:</strong> chat may use blinded preference or rubric scores; classification uses accuracy/F1; summarization uses factuality and task-specific content metrics; reasoning uses exact or rubric-scored answers; coding uses executable tests; safety uses policy-specific violation and refusal measures; agents use externally verified task completion.</p>
-<p><strong>Software-engineering agents:</strong> fail-to-pass (F2P) measures how many task-specific failing tests become passing; pass-to-pass (P2P) measures how many existing tests remain passing; binary reward is a strict guardrail that is one only when the configured pass conditions are all met. Steps, tokens, latency, and cost are secondary and must be interpreted with those quality outcomes.</p>
+<p><strong>Software-engineering agents:</strong> <a href="../reference/glossary.html#f2p" class="glossary-link">fail-to-pass (F2P)</a> measures how many task-specific failing tests become passing; <a href="../reference/glossary.html#p2p" class="glossary-link">pass-to-pass (P2P)</a> measures how many existing tests remain passing; binary <a href="../reference/glossary.html#reward" class="glossary-link">reward</a> is a strict guardrail that is one only when the configured pass conditions are all met. Steps, tokens, latency, and cost are secondary and must be interpreted with those quality outcomes.</p>
 <p>Report counts and denominators. For paired binary outcomes, show how often A-only passes, B-only passes, both pass, and neither passes. For continuous metrics, report per-pair deltas and distribution/uncertainty, not only two pooled averages.</p>
 
 <h2>7. Two ways pooled means manufacture a story</h2>
@@ -168,11 +168,11 @@
 <ul>
 <li><a href="../resources.html#canonical">High-trust quantization evaluation studies</a></li>
 <li><a href="../reference/quantization-decision-checklist.html">Five-step decision checklist</a></li>
-<li><a href="0005-choosing-and-validating-a-quant.html">Lesson 5: Choosing and Validating a Quant</a></li>
+<li><a href="../index.html#lessons-heading">Publication status for the evidence-gated capstone</a></li>
 </ul>
-<div class="terms-footer"><p><strong>Terms in this lesson:</strong> <a href="../reference/glossary.html#checkpoint">Checkpoint</a> · <a href="../reference/glossary.html#inference-engine">Inference engine</a> · <a href="../reference/glossary.html#perplexity">Perplexity</a> · <a href="../reference/glossary.html#pareto-point">Pareto point</a></p></div>
+<div class="terms-footer"><p><strong>Terms in this lesson:</strong> <a href="../reference/glossary.html#checkpoint">Checkpoint</a> · <a href="../reference/glossary.html#inference-engine">Inference engine</a> · <a href="../reference/glossary.html#perplexity">Perplexity</a> · <a href="../reference/glossary.html#kl-divergence">KL divergence</a> · <a href="../reference/glossary.html#f2p">Fail-to-pass</a> · <a href="../reference/glossary.html#p2p">Pass-to-pass</a> · <a href="../reference/glossary.html#reward">Reward</a> · <a href="../reference/glossary.html#pareto-point">Pareto point</a></p></div>
 </main>
-<nav class="course-nav" aria-label="Lesson navigation"><a href="0003-reading-quantization-formats.html">← Previous: Formats</a><a href="../index.html">Course home</a><a href="0005-choosing-and-validating-a-quant.html">Next: Decision and case study →</a></nav>
+<nav class="course-nav" aria-label="Lesson navigation"><a href="0003-reading-quantization-formats.html">← Previous: Formats</a><a href="../index.html">Course home</a></nav>
 <script src="../assets/quiz.js" defer></script>
 </body>
 </html>

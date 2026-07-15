@@ -10,7 +10,7 @@
 <body>
 <nav class="course-nav" aria-label="Lesson navigation"><a href="0001-tensors-and-layers.html">← Previous: Runtime state</a><a href="../index.html">Course home</a><a href="0003-reading-quantization-formats.html">Next: Formats and runtimes →</a></nav>
 <main>
-<p class="lesson-progress">Lesson 2 of 5 · ~14 min</p>
+<p class="lesson-progress">Lesson 2 of 5 · ~15 min</p>
 <h1>Lesson 2: How Quantization Actually Works</h1>
 <p>Quantization is not “make every number less accurate.” It is a specified round trip: map selected real-valued numbers to a restricted set of codes, store those codes plus reconstruction metadata, then reconstruct or compute with approximations during inference.</p>
 
@@ -30,12 +30,12 @@
 <h2>2. The portable encode-store-decode loop</h2>
 <div class="pipeline" aria-label="Quantization round trip">
 <div class="pipeline-step"><strong>Choose a group</strong><br>A declared slice of values shares metadata</div>
-<div class="pipeline-step"><strong>Fit a mapping</strong><br>Select scale, offset, codebook, or other parameters</div>
+<div class="pipeline-step"><strong>Fit a mapping</strong><br>Select scale, <a href="../reference/glossary.html#offset" class="glossary-link">offset</a>, codebook, or other parameters</div>
 <div class="pipeline-step"><strong>Encode</strong><br>Map each original value to a restricted code</div>
 <div class="pipeline-step"><strong>Store</strong><br>Save codes plus all required metadata</div>
 <div class="pipeline-step"><strong>Reconstruct or compute</strong><br>Use approximate values during an operation</div>
 </div>
-<p>A <a href="../reference/glossary.html#scale-factor" class="glossary-link">scale factor</a> sets the spacing between representable levels in many mappings. An affine mapping also uses an offset or zero point. Codebook-based or floating encodings use different metadata. “Low-bit” describes the codes, not the complete storage or arithmetic.</p>
+<p>A <a href="../reference/glossary.html#scale-factor" class="glossary-link">scale factor</a> sets the spacing between representable levels in many mappings. An <a href="../reference/glossary.html#affine-quantization" class="glossary-link">affine mapping</a> also uses an offset or <a href="../reference/glossary.html#zero-point" class="glossary-link">zero point</a>. Codebook-based or floating encodings use different metadata. “Low-bit” describes the codes, not the complete storage or arithmetic.</p>
 
 <h2>3. One complete two-bit affine round trip</h2>
 <p>Consider one group containing eight real values:</p>
@@ -83,7 +83,7 @@ reconstruct(q) = minimum + q × scale</code></pre>
 <caption>Implementation-independent mapping categories</caption>
 <thead><tr><th scope="col">Mapping family</th><th scope="col">Core idea</th><th scope="col">Useful question</th></tr></thead>
 <tbody>
-<tr><th scope="row">Symmetric linear</th><td>Levels are centered around zero and share a scale</td><td>Is the value distribution roughly balanced around zero?</td></tr>
+<tr><th scope="row"><a href="../reference/glossary.html#symmetric-quantization" class="glossary-link">Symmetric linear</a></th><td>Levels are centered around zero and share a scale</td><td>Is the value distribution roughly balanced around zero?</td></tr>
 <tr><th scope="row">Affine linear</th><td>A scale plus offset shifts the representable range</td><td>Does the group need an asymmetric range?</td></tr>
 <tr><th scope="row">Floating-like</th><td>Codes allocate range and precision through exponent/significand structure</td><td>How are extreme magnitudes and small values represented?</td></tr>
 <tr><th scope="row">Codebook/nonuniform</th><td>Codes index a chosen set of reconstruction values</td><td>How was the codebook fitted, and what metadata is required?</td></tr>
@@ -168,7 +168,7 @@ x_hat = scale × (q − z)</code></pre>
 <li><a href="../reference/quantization-decision-checklist.html">Five-step decision checklist</a></li>
 <li><a href="0003-reading-quantization-formats.html">Lesson 3: Reading Quantization Formats</a></li>
 </ul>
-<div class="terms-footer"><p><strong>Terms in this lesson:</strong> <a href="../reference/glossary.html#fp16">FP16</a> · <a href="../reference/glossary.html#bf16">bf16</a> · <a href="../reference/glossary.html#quantization">Quantization</a> · <a href="../reference/glossary.html#quantized-target">Quantized target</a> · <a href="../reference/glossary.html#scale-factor">Scale factor</a> · <a href="../reference/glossary.html#group-size">Group size</a> · <a href="../reference/glossary.html#effective-bits-per-weight">Effective bits per weight</a></p></div>
+<div class="terms-footer"><p><strong>Terms in this lesson:</strong> <a href="../reference/glossary.html#fp16">FP16</a> · <a href="../reference/glossary.html#bf16">bf16</a> · <a href="../reference/glossary.html#quantization">Quantization</a> · <a href="../reference/glossary.html#quantized-target">Quantized target</a> · <a href="../reference/glossary.html#offset">Offset</a> · <a href="../reference/glossary.html#scale-factor">Scale factor</a> · <a href="../reference/glossary.html#affine-quantization">Affine quantization</a> · <a href="../reference/glossary.html#zero-point">Zero point</a> · <a href="../reference/glossary.html#group-size">Group size</a> · <a href="../reference/glossary.html#effective-bits-per-weight">Effective bits per weight</a> · <a href="../reference/glossary.html#symmetric-quantization">Symmetric quantization</a></p></div>
 </main>
 <nav class="course-nav" aria-label="Lesson navigation"><a href="0001-tensors-and-layers.html">← Previous: Runtime state</a><a href="../index.html">Course home</a><a href="0003-reading-quantization-formats.html">Next: Formats and runtimes →</a></nav>
 <script src="../assets/quiz.js" defer></script>

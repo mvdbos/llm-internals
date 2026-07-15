@@ -22,13 +22,15 @@ dd { margin: .25rem 0 0 1rem; color: #333; }
 <h1>LLM and quantization glossary</h1>
 <p>Terms are separated by role: architecture, model artifact, quantized target, inference engine, runtime state, kernels/hardware, and evaluation. Architecture-dependent definitions say which architecture they describe.</p>
 <nav class="glossary-nav" aria-label="Glossary letters">
-<a href="#A">A</a><a href="#B">B</a><a href="#C">C</a><a href="#D">D</a><a href="#E">E</a><a href="#F">F</a><a href="#G">G</a><a href="#H">H</a><a href="#I">I</a><a href="#K">K</a><a href="#L">L</a><a href="#M">M</a><a href="#O">O</a><a href="#P">P</a><a href="#Q">Q</a><a href="#R">R</a><a href="#S">S</a><a href="#T">T</a><a href="#V">V</a><a href="#W">W</a>
+<a href="#A">A</a><a href="#B">B</a><a href="#C">C</a><a href="#D">D</a><a href="#E">E</a><a href="#F">F</a><a href="#G">G</a><a href="#H">H</a><a href="#I">I</a><a href="#K">K</a><a href="#L">L</a><a href="#M">M</a><a href="#O">O</a><a href="#P">P</a><a href="#Q">Q</a><a href="#R">R</a><a href="#S">S</a><a href="#T">T</a><a href="#V">V</a><a href="#W">W</a><a href="#Z">Z</a>
 </nav>
 
 <h2 id="A">A</h2>
 <dl>
 <dt id="activation">Activation</dt>
 <dd><span class="tag">runtime state</span>A value produced while the model processes input. Activations are distinct from stored parameters: parameter quantization does not automatically quantize activations.</dd>
+<dt id="affine-quantization">Affine Quantization</dt>
+<dd><span class="tag">quantization</span>A linear mapping whose reconstruction grid has both a scale and a shift, commonly written <code>q = round(x / s) + z</code> and <code>x̂ = s(q − z)</code>. The integer zero point <code>z</code>, a reconstruction offset/bias, and the scale are related but mathematically distinct quantities.</dd>
 <dt id="architecture">Architecture</dt>
 <dd><span class="tag">architecture</span>The model's computational structure: its layer types, dimensions, attention or recurrence pattern, normalization, routing, and other operations. An artifact records tensors and metadata for an architecture; an engine implements those operations.</dd>
 <dt id="artifact">Artifact <span class="aka">model artifact, container</span></dt>
@@ -57,6 +59,8 @@ dd { margin: .25rem 0 0 1rem; color: #333; }
 <dl>
 <dt id="calibration-data">Calibration Data</dt>
 <dd><span class="tag">quantization</span>Representative inputs used by some post-training methods to estimate sensitivity, ranges, or reconstruction error. Methods that use no calibration data should not be described as calibration-based.</dd>
+<dt id="causal-mask">Causal Mask</dt>
+<dd><span class="tag">architecture</span>A mask that prevents a sequence position from attending to future positions in conventional causal attention. Implementations may represent it explicitly or enforce the same restriction inside a kernel.</dd>
 <dt id="checkpoint">Checkpoint</dt>
 <dd><span class="tag">model</span>A specific saved model state. A fair precision comparison starts from the same checkpoint and changes only the declared conversion or quantization treatment.</dd>
 <dt id="context-window">Context Window</dt>
@@ -65,8 +69,8 @@ dd { margin: .25rem 0 0 1rem; color: #333; }
 
 <h2 id="D">D</h2>
 <dl>
-<dt id="deep-swe">Deep-SWE</dt>
-<dd><span class="tag">evaluation</span>A software-engineering benchmark workflow in which an agent modifies real repositories and an external test suite verifies the result. Exact task set, harness, tools, limits, and scoring revision belong in the protocol.</dd>
+<dt id="decoding">Decoding</dt>
+<dd><span class="tag">generation setting</span>The rule that selects output tokens from logits or probabilities, including greedy choice, sampling, constraints, and stop handling. Decoding settings can change observed behavior without changing model weights.</dd>
 <dt id="d-model"><code>d_model</code> <span class="aka">hidden dimension</span></dt>
 <dd><span class="tag">architecture</span>The width of a token representation in many Transformer configurations. Other dimensions—attention head width, intermediate width, recurrent state, or expert width—must be read separately from the model configuration.</dd>
 </dl>
@@ -85,6 +89,8 @@ dd { margin: .25rem 0 0 1rem; color: #333; }
 <dl>
 <dt id="feed-forward-network-ffn">Feed-Forward Network <span class="aka">FFN, MLP block</span></dt>
 <dd><span class="tag">architecture</span>A per-position nonlinear transformation used in many Transformer layers. Its expansion ratio, activation, gating, expert routing, parameter share, and quantization sensitivity are architecture- and checkpoint-dependent.</dd>
+<dt id="f2p">Fail-to-Pass <span class="aka">F2P</span></dt>
+<dd><span class="tag">evaluation</span>The share or count of task-specific tests that failed before a change and pass afterward. The exact test set, denominator, verifier revision, and treatment of missing results must be reported.</dd>
 <dt id="fp16">FP16 <span class="aka">IEEE binary16, half precision</span></dt>
 <dd><span class="tag">numeric format</span>A 16-bit floating-point format with one sign bit, five exponent bits, and ten fraction bits. Calling it a “quality baseline” is an experiment choice, not a mathematical guarantee.</dd>
 <dt id="fp32">FP32 <span class="aka">IEEE binary32, single precision</span></dt>
@@ -123,6 +129,8 @@ dd { margin: .25rem 0 0 1rem; color: #333; }
 
 <h2 id="K">K</h2>
 <dl>
+<dt id="kl-divergence">KL Divergence <span class="aka">Kullback–Leibler divergence</span></dt>
+<dd><span class="tag">evaluation</span>An asymmetric measure of difference between probability distributions, commonly <code>KL(p‖q) = Σ pᵢ log(pᵢ/qᵢ)</code>. In model comparisons it is an intrinsic distribution diagnostic, not proof of equal downstream behavior.</dd>
 <dt id="k-quant">K-quant</dt>
 <dd><span class="tag">quantized target</span>A GGML family of super-block tensor encodings such as <code>Q4_K</code> and <code>Q6_K</code>. A model-file recipe with an <code>_M</code> suffix may choose different encodings for different tensors; it is inaccurate to reduce that selection to “attention gets one bit width and FFN another.”</dd>
 <dt id="kernel">Kernel</dt>
@@ -145,8 +153,7 @@ dd { margin: .25rem 0 0 1rem; color: #333; }
 <dl>
 <dt id="matrix">Matrix</dt>
 <dd><span class="tag">math</span>A two-dimensional tensor. Matrix multiplication is common in neural networks, but not every parameter or activation is stored or executed as a simple dense matrix.</dd>
-<dt id="mini-swe-agent">mini-swe-agent</dt>
-<dd><span class="tag">evaluation</span>An agent harness that can give a model a controlled shell/edit/test loop. Its version, prompt, tools, limits, and environment influence results and belong in benchmark provenance.</dd>
+
 <dt id="mixed-precision-quantization">Mixed-Precision Quantization</dt>
 <dd><span class="tag">quantization</span>Using more than one numeric encoding or precision across tensors or operations. In a model-file recipe, the mixture is an implementation decision that must be read from the pinned quantizer logic or artifact metadata—not inferred from a suffix alone.</dd>
 <dt id="moe">Mixture of Experts <span class="aka">MoE</span></dt>
@@ -155,8 +162,8 @@ dd { margin: .25rem 0 0 1rem; color: #333; }
 
 <h2 id="O">O</h2>
 <dl>
-<dt id="omlx">oMLX</dt>
-<dd><span class="tag">runtime</span>An inference engine built on Apple's MLX framework. Its supported artifact metadata, quantization modes, kernels, and oQ recipes are versioned implementation details; current oQ8 documentation must not be conflated with MLX affine 8-bit/group 64.</dd>
+<dt id="offset">Offset <span class="aka">reconstruction offset, bias in some APIs</span></dt>
+<dd><span class="tag">quantization</span>An additive quantity that shifts a reconstruction grid. An implementation may store an offset directly or derive an equivalent shift from a scale and integer zero point; field names and units must be read from the exact scheme.</dd>
 <dt id="output-layer">Output Layer <span class="aka">LM head</span></dt>
 <dd><span class="tag">architecture</span>The projection from a final hidden representation to vocabulary logits in many language models. It may share parameters with the input embedding or use a separate tensor.</dd>
 </dl>
@@ -165,6 +172,8 @@ dd { margin: .25rem 0 0 1rem; color: #333; }
 <dl>
 <dt id="parameter">Parameter</dt>
 <dd><span class="tag">model</span>A learned value stored in a checkpoint, including weights and sometimes biases, scales, embeddings, or other learned tensors. Parameter count is not the same as artifact bytes or runtime memory.</dd>
+<dt id="p2p">Pass-to-Pass <span class="aka">P2P</span></dt>
+<dd><span class="tag">evaluation</span>The share or count of existing tests that passed before a change and still pass afterward. It is a regression-preservation measure and must be reported with its denominator and verifier revision.</dd>
 <dt id="pareto-point">Pareto Point</dt>
 <dd><span class="tag">decision</span>A candidate for which no measured alternative is at least as good on every chosen objective and strictly better on one. The objectives and uncertainty—quality, latency, memory, energy, or others—must be stated.</dd>
 <dt id="perplexity">Perplexity</dt>
@@ -183,6 +192,8 @@ dd { margin: .25rem 0 0 1rem; color: #333; }
 <dl>
 <dt id="retained-runtime-state">Retained Runtime State</dt>
 <dd><span class="tag">runtime state</span>State kept across generation steps so the engine does not recompute all prior work. A KV cache is one architecture-specific example; recurrent state and state-space state are different.</dd>
+<dt id="reward">Reward</dt>
+<dd><span class="tag">evaluation</span>A scalar outcome defined by a particular evaluator. In strict software-engineering evaluation it may be binary and require every F2P and P2P condition to pass; never infer its definition from the word alone.</dd>
 <dt id="runtime-memory">Runtime Memory</dt>
 <dd><span class="tag">measurement</span>Memory allocated while the engine is loaded or generating: parameters, retained state, temporary workspaces, allocator overhead, executable resources, and sometimes duplicated buffers. Report the measurement boundary and whether it is peak or steady state.</dd>
 </dl>
@@ -193,6 +204,8 @@ dd { margin: .25rem 0 0 1rem; color: #333; }
 <dd><span class="tag">math</span>A single value, often described as a rank-zero tensor in tensor libraries.</dd>
 <dt id="scale-factor">Scale Factor</dt>
 <dd><span class="tag">quantization</span>A value used to map between stored codes and reconstructed values. Schemes differ: some also use offsets/biases, zero points, codebooks, multiple scales, or nonuniform encodings.</dd>
+<dt id="symmetric-quantization">Symmetric Quantization</dt>
+<dd><span class="tag">quantization</span>A linear mapping whose reconstruction levels are centered around zero and normally use a scale without a separate shift. It can represent zero exactly but may use the available code range inefficiently for asymmetric value distributions.</dd>
 <dt id="softmax">Softmax</dt>
 <dd><span class="tag">math</span>A function that maps finite scores to positive values that sum to one. It is used in conventional attention and often in converting logits to probabilities, though sampling can apply additional transformations.</dd>
 <dt id="static-memory">Static Memory <span class="aka">loaded parameter memory</span></dt>
@@ -225,6 +238,12 @@ dd { margin: .25rem 0 0 1rem; color: #333; }
 <dl>
 <dt id="weight">Weight</dt>
 <dd><span class="tag">model</span>A learned parameter used in an operation. Weight-only quantization changes selected stored weights while leaving activations or retained state at their configured formats unless stated otherwise.</dd>
+</dl>
+
+<h2 id="Z">Z</h2>
+<dl>
+<dt id="zero-point">Zero Point</dt>
+<dd><span class="tag">quantization</span>The integer code corresponding to real zero in a common affine parameterization. It shifts code alignment; it is not the scale, and an API's stored floating bias/offset may be algebraically related without being the same quantity or unit.</dd>
 </dl>
 </main>
 <nav class="course-nav" aria-label="Footer"><a href="../index.html">← Course home</a><a href="../resources.html#canonical">Evidence ledger</a></nav>

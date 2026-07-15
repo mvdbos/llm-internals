@@ -125,6 +125,24 @@ th { font-weight: 600; background: #fafafa; }
   color: #333;
 }
 
+/* Course status banners */
+.status-banner {
+  border: 2px solid currentColor;
+  border-radius: 6px;
+  padding: 1rem 1.2rem;
+  margin: 0 0 1.5rem;
+  font-weight: 500;
+}
+.status-banner strong {
+  display: block;
+  margin-bottom: 0.25rem;
+}
+.status-banner--draft {
+  background: #fff7ed;
+  border-color: #c2410c;
+  color: #7c2d12;
+}
+
 /* Quiz */
 .quiz { margin: 1.5rem 0; }
 .quiz-question { font-weight: 600; margin-bottom: 0.5rem; }

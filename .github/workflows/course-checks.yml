@@ -1,0 +1,26 @@
+name: Course checks
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run unit contracts
+        run: python3 -m unittest discover -s tests -v
+      - name: Audit published course while the evidence-gated lesson is deferred
+        run: python3 scripts/audit_course.py --allow-planned-lessons
+      - name: Check shared quiz JavaScript syntax
+        run: node --check assets/quiz.js
+
+# Replace the migration audit above with `python3 scripts/audit_course.py` only
+# after the planned, evidence-gated lesson exists and its manifest status is removed.

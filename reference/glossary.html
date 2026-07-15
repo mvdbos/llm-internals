@@ -3,313 +3,230 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Reference: LLM Glossary</title>
+<meta name="description" content="A precise glossary for model artifacts, inference runtimes, quantization, memory, and evaluation.">
+<title>Reference: LLM and Quantization Glossary</title>
 <link rel="stylesheet" href="../assets/style.css">
 <style>
-  /* Glossary-specific styles */
-  .glossary-nav {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.3rem;
-    margin: 1rem 0 2rem;
-  }
-  .glossary-nav a {
-    display: inline-block;
-    padding: 0.2rem 0.5rem;
-    border: 1px solid var(--border);
-    border-radius: 3px;
-    font-size: 0.85rem;
-    font-family: var(--font-mono);
-  }
-  .glossary-nav a:hover {
-    background: var(--accent-light);
-    text-decoration: none;
-  }
-  dt {
-    font-weight: 600;
-    margin-top: 1.5rem;
-    font-size: 1.05rem;
-    color: #222;
-  }
-  dt .aka {
-    font-weight: 400;
-    font-size: 0.85rem;
-    color: var(--muted);
-    margin-left: 0.5rem;
-  }
-  dd {
-    margin: 0.25rem 0 0 1rem;
-    color: #333;
-  }
-  dd + dd {
-    margin-top: 0.15rem;
-  }
-  .tag {
-    display: inline-block;
-    font-size: 0.7rem;
-    padding: 0.1rem 0.4rem;
-    border-radius: 3px;
-    background: var(--accent-light);
-    color: var(--accent);
-    margin-right: 0.3rem;
-    vertical-align: middle;
-  }
-  hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+.glossary-nav { display: flex; flex-wrap: wrap; gap: .3rem; margin: 1rem 0 2rem; }
+.glossary-nav a { padding: .2rem .5rem; border: 1px solid var(--border); border-radius: 3px; font: .85rem var(--font-mono); }
+.glossary-nav a:hover { background: var(--accent-light); text-decoration: none; }
+dt { margin-top: 1.5rem; color: #222; font-size: 1.05rem; font-weight: 600; scroll-margin-top: 1rem; }
+dt .aka { margin-left: .5rem; color: var(--muted); font-size: .85rem; font-weight: 400; }
+dd { margin: .25rem 0 0 1rem; color: #333; }
+.tag { display: inline-block; margin-right: .3rem; padding: .1rem .4rem; border-radius: 3px; background: var(--accent-light); color: var(--accent); font-size: .7rem; vertical-align: middle; }
 </style>
 </head>
 <body>
+<nav class="course-nav" aria-label="Breadcrumb"><a href="../index.html">← Course home</a><a href="../resources.html#canonical">Evidence ledger</a></nav>
+<main>
+<h1>LLM and quantization glossary</h1>
+<p>Terms are separated by role: architecture, model artifact, quantized target, inference engine, runtime state, kernels/hardware, and evaluation. Architecture-dependent definitions say which architecture they describe.</p>
+<nav class="glossary-nav" aria-label="Glossary letters">
+<a href="#A">A</a><a href="#B">B</a><a href="#C">C</a><a href="#D">D</a><a href="#E">E</a><a href="#F">F</a><a href="#G">G</a><a href="#H">H</a><a href="#I">I</a><a href="#K">K</a><a href="#L">L</a><a href="#M">M</a><a href="#O">O</a><a href="#P">P</a><a href="#Q">Q</a><a href="#R">R</a><a href="#S">S</a><a href="#T">T</a><a href="#V">V</a><a href="#W">W</a>
+</nav>
 
-<h1>Reference: LLM Glossary</h1>
-<p><em>Every term from the course, plus essentials. Print-friendly.</em></p>
-
-<div class="glossary-nav">
-  <a href="#A">A</a> <a href="#B">B</a> <a href="#C">C</a> <a href="#D">D</a> <a href="#E">E</a>
-  <a href="#F">F</a> <a href="#G">G</a> <a href="#H">H</a> <a href="#I">I</a> <a href="#K">K</a>
-  <a href="#L">L</a> <a href="#M">M</a> <a href="#O">O</a> <a href="#P">P</a> <a href="#Q">Q</a>
-  <a href="#S">S</a> <a href="#T">T</a> <a href="#W">W</a>
-</div>
-
-<!-- ==================== A ==================== -->
 <h2 id="A">A</h2>
-
 <dl>
-  <dt id="attention">Attention <span class="aka">aka Self-Attention</span></dt>
-  <dd><span class="tag">architecture</span> The mechanism that lets each token "look at" every other token in the sequence to gather context. A token representing "bank" will attend strongly to "river" or "money" depending on surrounding words.</dd>
-  <dd>Attention is computed as: <strong>Query · Key → scores → softmax → weighted sum of Values</strong>. This is the core innovation of the Transformer architecture.</dd>
-
-  <dt id="attention-head">Attention Head</dt>
-  <dd><span class="tag">architecture</span> One independent attention computation. Modern LLMs use <strong>multi-head attention</strong> — typically 32–64 heads running in parallel, each focusing on different relationships (syntax, semantics, long-range dependencies, etc.).</dd>
+<dt id="activation">Activation</dt>
+<dd><span class="tag">runtime state</span>A value produced while the model processes input. Activations are distinct from stored parameters: parameter quantization does not automatically quantize activations.</dd>
+<dt id="architecture">Architecture</dt>
+<dd><span class="tag">architecture</span>The model's computational structure: its layer types, dimensions, attention or recurrence pattern, normalization, routing, and other operations. An artifact records tensors and metadata for an architecture; an engine implements those operations.</dd>
+<dt id="artifact">Artifact <span class="aka">model artifact, container</span></dt>
+<dd><span class="tag">artifact</span>A distributable file or directory that stores model tensors plus enough metadata to reconstruct them. GGUF and an MLX model directory are different artifact families; neither is itself an inference engine.</dd>
+<dt id="attention">Attention <span class="aka">self-attention when source and target are the same sequence</span></dt>
+<dd><span class="tag">architecture</span>A mechanism that forms weighted combinations of value vectors using similarities between query and key vectors. Causal self-attention masks future positions. Windowed, grouped-query, multi-query, linear, and hybrid variants do not all have the same compute or retained-state formula.</dd>
+<dt id="attention-head">Attention Head</dt>
+<dd><span class="tag">architecture</span>One set of query/key/value projections and its attention calculation inside multi-head attention. Head count and head dimension are architecture fields, not universal constants.</dd>
 </dl>
 
-<!-- ==================== B ==================== -->
 <h2 id="B">B</h2>
-
 <dl>
-  <dt id="bf16">bf16 <span class="aka">aka Brain Float 16</span></dt>
-  <dd><span class="tag">precision</span> A 16-bit floating-point format (1 sign + 8 exponent + 7 fraction bits). Same dynamic range as FP32 but half the memory. The standard training/inference format for many modern LLMs. Often used interchangeably with FP16 for inference purposes.</dd>
-
-  <dt id="bias">Bias</dt>
-  <dd><span class="tag">architecture</span> A learnable constant added to a layer's output, alongside the weight multiplication. <code>output = weights × input + bias</code>. Much smaller than weights in parameter count. Some modern architectures omit biases entirely.</dd>
-
-  <dt id="block-wise-quantization">Block-wise Quantization</dt>
-  <dd><span class="tag">quantization</span> Quantizing weights in small groups (blocks), each with its own scale factor. Typical block size: 32 or 128 weights. A block of 32 weights at 4-bit uses: 32 × 4 bits = 128 bits + one 16-bit scale factor = 144 bits total (4.5 effective bits/weight).</dd>
+<dt id="backend">Backend</dt>
+<dd><span class="tag">runtime</span>The execution path used by an inference engine for a device or framework. A backend determines available kernels, supported tensor encodings, and often performance; support must be checked for a named version.</dd>
+<dt id="bf16">bf16 <span class="aka">bfloat16, Brain Floating Point</span></dt>
+<dd><span class="tag">numeric format</span>A 16-bit floating-point format with one sign bit, eight exponent bits, and seven fraction bits. Compared with FP16 it keeps FP32-like exponent range but less significand precision.</dd>
+<dt id="bias">Bias</dt>
+<dd><span class="tag">architecture</span>A learned additive term in an operation such as <code>y = Wx + b</code>. Some architectures omit bias terms in some or all projections.</dd>
+<dt id="block-size">Block Size</dt>
+<dd><span class="tag">quantized target</span>The number of values that share encoding metadata in a block format. It is scheme-specific and not interchangeable with an MLX affine group size unless the implementation defines them identically.</dd>
+<dt id="block-wise-quantization">Block-wise Quantization</dt>
+<dd><span class="tag">quantization</span>A family of encodings that partition a tensor into blocks and store shared metadata—such as scales, offsets, or codebook information—alongside low-bit values. Effective storage includes both codes and metadata.</dd>
 </dl>
 
-<!-- ==================== C ==================== -->
 <h2 id="C">C</h2>
-
 <dl>
-  <dt id="context-window">Context Window</dt>
-  <dd><span class="tag">inference</span> The maximum number of tokens the model can "see" at once. Determines how much conversation or code fits in a single prompt. Modern models: 32k–1M tokens. Longer context = more KV cache memory needed.</dd>
+<dt id="calibration-data">Calibration Data</dt>
+<dd><span class="tag">quantization</span>Representative inputs used by some post-training methods to estimate sensitivity, ranges, or reconstruction error. Methods that use no calibration data should not be described as calibration-based.</dd>
+<dt id="checkpoint">Checkpoint</dt>
+<dd><span class="tag">model</span>A specific saved model state. A fair precision comparison starts from the same checkpoint and changes only the declared conversion or quantization treatment.</dd>
+<dt id="context-window">Context Window</dt>
+<dd><span class="tag">architecture/runtime</span>The sequence length a particular model and engine configuration can process. Advertised maxima, configured maxima, and practical limits can differ; retained-state memory usually grows with sequence length but the formula depends on architecture and cache strategy.</dd>
 </dl>
 
-<!-- ==================== D ==================== -->
 <h2 id="D">D</h2>
-
 <dl>
-  <dt id="deep-swe">Deep-SWE</dt>
-  <dd><span class="tag">benchmark</span> A benchmark for evaluating LLMs on real-world software engineering tasks (fixing GitHub issues). Uses pier + mini-swe-agent to run models against actual codebases with verifiable test suites.</dd>
-
-  <dt id="d-model">d_model <span class="aka">aka Hidden Dimension</span></dt>
-  <dd><span class="tag">architecture</span> The size of the vector representing each token inside the model. Common values: 4096 (7B models), 8192 (70B+ models). Every tensor flowing through the transformer layers has this as its inner dimension.</dd>
+<dt id="deep-swe">Deep-SWE</dt>
+<dd><span class="tag">evaluation</span>A software-engineering benchmark workflow in which an agent modifies real repositories and an external test suite verifies the result. Exact task set, harness, tools, limits, and scoring revision belong in the protocol.</dd>
+<dt id="d-model"><code>d_model</code> <span class="aka">hidden dimension</span></dt>
+<dd><span class="tag">architecture</span>The width of a token representation in many Transformer configurations. Other dimensions—attention head width, intermediate width, recurrent state, or expert width—must be read separately from the model configuration.</dd>
 </dl>
 
-<!-- ==================== E ==================== -->
 <h2 id="E">E</h2>
-
 <dl>
-  <dt id="embedding">Embedding</dt>
-  <dd><span class="tag">architecture</span> A dense vector (list of numbers) that represents a token's meaning. The embedding layer converts token IDs (integers) into these vectors. "Cat" and "kitten" get similar embedding vectors; "cat" and "car" get different ones.</dd>
-
-  <dt id="embedding-layer">Embedding Layer</dt>
-  <dd><span class="tag">architecture</span> The first layer of an LLM. A lookup table: token ID → dense vector of size d_model. Size = vocab_size × d_model. Highly sensitive to quantization because errors here affect which tokens the model can distinguish.</dd>
+<dt id="effective-bits-per-weight">Effective Bits per Weight <span class="aka">effective bpw</span></dt>
+<dd><span class="tag">measurement</span>Total model-artifact tensor bytes multiplied by eight and divided by the declared parameter count, under an explicitly stated accounting rule. It can differ from the nominal code width because metadata, mixed tensor encodings, and unquantized tensors add storage.</dd>
+<dt id="embedding">Embedding</dt>
+<dd><span class="tag">architecture</span>A vector representation associated with a token or other discrete item. Similarity is learned from training; no individual coordinate has a fixed human-readable meaning.</dd>
+<dt id="embedding-layer">Embedding Layer</dt>
+<dd><span class="tag">architecture</span>A parameterized lookup that maps token IDs to vectors. Whether it is quantized, tied to the output projection, or kept at another precision is an artifact/conversion decision.</dd>
 </dl>
 
-<!-- ==================== F ==================== -->
 <h2 id="F">F</h2>
-
 <dl>
-  <dt id="feed-forward-network-ffn">Feed-Forward Network (FFN)</dt>
-  <dd><span class="tag">architecture</span> The "thinking" part of each transformer layer. A two-layer MLP that transforms each token's representation independently (no mixing between tokens — that's attention's job). Typical structure: d_model → 4×d_model → d_model.</dd>
-  <dd>FFN layers hold ~65% of all parameters in a transformer. They're the most redundant and therefore the <strong>most tolerant of aggressive quantization</strong>.</dd>
-
-  <dt id="fp16">FP16 <span class="aka">aka Half-Precision, float16</span></dt>
-  <dd><span class="tag">precision</span> 16-bit floating-point: 1 sign + 5 exponent + 10 fraction bits. 2 bytes per weight. The practical quality baseline for LLM inference — virtually indistinguishable from FP32.</dd>
-
-  <dt id="fp32">FP32 <span class="aka">aka Single-Precision, float32</span></dt>
-  <dd><span class="tag">precision</span> 32-bit floating-point: 4 bytes per weight. ~7 decimal digits of precision. Used during training, overkill for inference. A 7B model at FP32 = 28 GB.</dd>
+<dt id="feed-forward-network-ffn">Feed-Forward Network <span class="aka">FFN, MLP block</span></dt>
+<dd><span class="tag">architecture</span>A per-position nonlinear transformation used in many Transformer layers. Its expansion ratio, activation, gating, expert routing, parameter share, and quantization sensitivity are architecture- and checkpoint-dependent.</dd>
+<dt id="fp16">FP16 <span class="aka">IEEE binary16, half precision</span></dt>
+<dd><span class="tag">numeric format</span>A 16-bit floating-point format with one sign bit, five exponent bits, and ten fraction bits. Calling it a “quality baseline” is an experiment choice, not a mathematical guarantee.</dd>
+<dt id="fp32">FP32 <span class="aka">IEEE binary32, single precision</span></dt>
+<dd><span class="tag">numeric format</span>A 32-bit floating-point format with one sign bit, eight exponent bits, and 23 explicitly stored fraction bits. Engines may use it selectively for accumulation or numerically sensitive operations.</dd>
 </dl>
 
-<!-- ==================== G ==================== -->
 <h2 id="G">G</h2>
-
 <dl>
-  <dt id="gguf">GGUF <span class="aka">aka GPT-Generated Unified Format</span></dt>
-  <dd><span class="tag">format</span> The file format used by llama.cpp for distributing quantized models. A single file containing both the model architecture metadata and the quantized weights. Superseded GGML.</dd>
-
-  <dt id="group-wise-quantization">Group-wise Quantization</dt>
-  <dd><span class="tag">quantization</span> See <a href="#B">Block-wise Quantization</a>. The terms are used interchangeably.</dd>
+<dt id="gguf">GGUF <span class="aka">GGML Universal File</span></dt>
+<dd><span class="tag">artifact</span>A binary model-artifact format containing metadata and typed tensors. It is associated with the GGML ecosystem but is not itself an inference engine or a synonym for quantization.</dd>
+<dt id="gguf-quantization-levels">GGUF quantization type and model-file recipe labels</dt>
+<dd><span class="tag">quantized target</span>Labels such as <code>Q8_0</code>, <code>Q6_K</code>, and <code>IQ4_XS</code> name concrete GGML tensor encodings. Labels such as <code>Q4_K_M</code> can name a llama.cpp model-file recipe that selects a mixture of tensor encodings. Meanings and effective bpw are version- and model-specific.</dd>
+<dt id="group-size">Group Size</dt>
+<dd><span class="tag">quantized target</span>The number of values that share quantization parameters in a group-wise implementation. Always state it with mode and bit width—for example, affine 8-bit/group 64.</dd>
+<dt id="group-wise-quantization">Group-wise Quantization</dt>
+<dd><span class="tag">quantization</span>Quantization that shares parameters across a group of values. “Group” and “block” are implementation terms; use the upstream API's name rather than assuming two schemes are equivalent.</dd>
 </dl>
 
-<!-- ==================== H ==================== -->
 <h2 id="H">H</h2>
-
 <dl>
-  <dt id="hidden-state">Hidden State</dt>
-  <dd><span class="tag">architecture</span> The tensor flowing between layers, representing the current "understanding" of each token. Shape: <code>(batch, sequence_length, d_model)</code>. Each transformer layer reads the hidden state, transforms it, and passes it forward.</dd>
+<dt id="hardware">Hardware</dt>
+<dd><span class="tag">execution</span>The CPU, GPU, accelerator, memory subsystem, and device topology on which kernels run. Artifact size alone does not predict speed; hardware and kernel support are part of the comparison.</dd>
+<dt id="hidden-state">Hidden State</dt>
+<dd><span class="tag">runtime state</span>An intermediate representation passed between operations. In a conventional Transformer it commonly has shape <code>(batch, sequence, hidden_dimension)</code>; recurrent and state-space models may retain different state.</dd>
 </dl>
 
-<!-- ==================== I ==================== -->
 <h2 id="I">I</h2>
-
 <dl>
-  <dt id="importance-weighted-quantization-iq">Importance-Weighted Quantization (IQ)</dt>
-  <dd><span class="tag">quantization</span> A smarter quantization strategy that gives more precision to "important" weights (those with larger magnitude or higher sensitivity) and fewer bits to less important ones. IQ quants (IQ4_XS, IQ3_XXS) typically outperform traditional Q quants at the same file size.</dd>
-
-  <dt id="inference">Inference</dt>
-  <dd><span class="tag">general</span> Using a trained model to generate output (as opposed to training). Running <code>model.generate("Hello")</code> is inference. Inference is where quantization matters — training uses full precision.</dd>
+<dt id="importance-weighted-quantization-iq">Importance-Weighted Quantization <span class="aka">IQ in GGML labels</span></dt>
+<dd><span class="tag">quantized target</span>A family of GGML encodings and quantizer procedures that use importance information and specialized codebooks/metadata. Quality must be evaluated for the exact tensor type, recipe, model, and workload; “IQ” is not a generic guarantee of superiority.</dd>
+<dt id="inference">Inference</dt>
+<dd><span class="tag">runtime</span>Executing a trained checkpoint to obtain outputs. Inference memory includes loaded parameters and runtime allocations; it is not equal to artifact file size.</dd>
+<dt id="inference-engine">Inference Engine <span class="aka">runtime</span></dt>
+<dd><span class="tag">runtime</span>Software that loads an artifact, schedules model operations, manages retained state, and invokes device kernels. Engine name and version are required when claiming format support or speed.</dd>
 </dl>
 
-<!-- ==================== K ==================== -->
 <h2 id="K">K</h2>
-
 <dl>
-  <dt id="k-quant">K-quant</dt>
-  <dd><span class="tag">quantization</span> A quantization scheme in llama.cpp that uses <strong>different block sizes and bit allocations per layer type</strong>. Attention layers get more bits; FFN layers get fewer. The "K" stands for the superblock structure used internally. Q4_K_M uses ~4.6 effective bits averaged across all layers.</dd>
-
-  <dt id="kv-cache">KV Cache</dt>
-  <dd><span class="tag">inference</span> A memory buffer that stores the Key and Value tensors from every previous token. Without it, the model would re-compute attention for the entire sequence on every new token (quadratic cost). The KV cache grows linearly with context length and is a major memory consumer alongside model weights.</dd>
+<dt id="k-quant">K-quant</dt>
+<dd><span class="tag">quantized target</span>A GGML family of super-block tensor encodings such as <code>Q4_K</code> and <code>Q6_K</code>. A model-file recipe with an <code>_M</code> suffix may choose different encodings for different tensors; it is inaccurate to reduce that selection to “attention gets one bit width and FFN another.”</dd>
+<dt id="kernel">Kernel</dt>
+<dd><span class="tag">execution</span>A low-level implementation of an operation for particular hardware and tensor layouts. A compact encoding can be slower if the engine lacks an efficient kernel for it.</dd>
+<dt id="kv-cache">KV Cache</dt>
+<dd><span class="tag">runtime state</span>In conventional cached self-attention, retained key and value vectors from processed tokens. It does not contain attention scores and old entries are normally reused rather than rewritten. Memory depends on layers, retained KV heads, head dimension, sequence length, bytes per element, batch, and cache strategy. Recurrent, state-space, linear-attention, and hybrid models require different retained-state descriptions.</dd>
 </dl>
 
-<!-- ==================== L ==================== -->
 <h2 id="L">L</h2>
-
 <dl>
-  <dt id="layer">Layer</dt>
-  <dd><span class="tag">architecture</span> A mathematical operation that takes a tensor as input and produces a tensor as output. Layers contain learnable weights. Stacked together, they form the model.</dd>
-
-  <dt id="layer-norm">Layer Norm</dt>
-  <dd><span class="tag">architecture</span> A normalization layer that keeps values in a stable range (mean ≈ 0, std ≈ 1). Prevents values from exploding or vanishing as they pass through many layers. Has very few parameters — almost negligible for quantization purposes.</dd>
-
-  <dt id="logits">Logits</dt>
-  <dd><span class="tag">architecture</span> The raw, unnormalized scores for each possible next token, output by the final layer. Shape: <code>(batch, sequence, vocab_size)</code>. Converted to probabilities via softmax. The token with the highest logit is (usually) the model's next-word prediction.</dd>
+<dt id="layer">Layer</dt>
+<dd><span class="tag">architecture</span>A named stage of computation that transforms inputs into outputs and may contain parameters. “Layer” can refer to different granularities, so memory calculations should name the exact tensors counted.</dd>
+<dt id="layer-norm">Layer Normalization</dt>
+<dd><span class="tag">architecture</span>A normalization operation over feature dimensions. Modern architectures may use LayerNorm, RMSNorm, or variants and may place them before or after other blocks.</dd>
+<dt id="logits">Logits</dt>
+<dd><span class="tag">runtime state</span>Unnormalized scores produced before a probability transform or selection rule. For next-token generation, the final logits usually have one score per vocabulary item for the current position.</dd>
 </dl>
 
-<!-- ==================== M ==================== -->
 <h2 id="M">M</h2>
-
 <dl>
-  <dt id="matrix">Matrix</dt>
-  <dd><span class="tag">math</span> A 2-dimensional tensor: rows × columns. Most layer weights are stored as matrices. A typical attention weight matrix in a 7B model: 4096 × 4096 numbers.</dd>
-
-  <dt id="mini-swe-agent">mini-swe-agent</dt>
-  <dd><span class="tag">benchmark</span> The agent harness used in Deep-SWE benchmarks. It gives an LLM a bash shell and a coding task, then lets it edit files, run tests, and iterate. Tracks the trajectory (thoughts + actions) for analysis.</dd>
-
-  <dt id="mixed-precision-quantization">Mixed-Precision Quantization</dt>
-  <dd><span class="tag">quantization</span> Using different bit-widths for different layers. K-quants implement this: embeddings at ~6-bit, attention at ~5-6 bit, FFN at ~4 bit. Maximizes quality per byte by putting precision where it matters most.</dd>
-
-  <dt id="moe">MoE <span class="aka">aka Mixture of Experts</span></dt>
-  <dd><span class="tag">architecture</span> A variant where FFN layers are split into multiple "experts," and each token only activates a subset (typically 2 out of 8). Reduces compute per token while increasing total parameters. DeepSeek-V2/V3, Mixtral, and recent Qwen models use MoE.</dd>
+<dt id="matrix">Matrix</dt>
+<dd><span class="tag">math</span>A two-dimensional tensor. Matrix multiplication is common in neural networks, but not every parameter or activation is stored or executed as a simple dense matrix.</dd>
+<dt id="mini-swe-agent">mini-swe-agent</dt>
+<dd><span class="tag">evaluation</span>An agent harness that can give a model a controlled shell/edit/test loop. Its version, prompt, tools, limits, and environment influence results and belong in benchmark provenance.</dd>
+<dt id="mixed-precision-quantization">Mixed-Precision Quantization</dt>
+<dd><span class="tag">quantization</span>Using more than one numeric encoding or precision across tensors or operations. In a model-file recipe, the mixture is an implementation decision that must be read from the pinned quantizer logic or artifact metadata—not inferred from a suffix alone.</dd>
+<dt id="moe">Mixture of Experts <span class="aka">MoE</span></dt>
+<dd><span class="tag">architecture</span>An architecture in which routing selects a subset of expert sub-networks for each token. Total stored parameters, active parameters, memory traffic, and quantization choices must be distinguished.</dd>
 </dl>
 
-<!-- ==================== O ==================== -->
 <h2 id="O">O</h2>
-
 <dl>
-  <dt id="omlx">oMLX</dt>
-  <dd><span class="tag">inference</span> An inference engine built on Apple's MLX framework for running LLMs on Apple Silicon. Supports on-the-fly quantization (switch between bf16 and quantized without re-downloading models). Used in the Deep-SWE benchmarks described in this course.</dd>
-
-  <dt id="output-layer">Output Layer <span class="aka">aka LM Head</span></dt>
-  <dd><span class="tag">architecture</span> The final layer: converts the last hidden state into logits over the vocabulary. Size = d_model × vocab_size. Often shares weights with the embedding layer ("tied embeddings"). Highly sensitive to quantization.</dd>
+<dt id="omlx">oMLX</dt>
+<dd><span class="tag">runtime</span>An inference engine built on Apple's MLX framework. Its supported artifact metadata, quantization modes, kernels, and oQ recipes are versioned implementation details; current oQ8 documentation must not be conflated with MLX affine 8-bit/group 64.</dd>
+<dt id="output-layer">Output Layer <span class="aka">LM head</span></dt>
+<dd><span class="tag">architecture</span>The projection from a final hidden representation to vocabulary logits in many language models. It may share parameters with the input embedding or use a separate tensor.</dd>
 </dl>
 
-<!-- ==================== P ==================== -->
 <h2 id="P">P</h2>
-
 <dl>
-  <dt id="parameter">Parameter</dt>
-  <dd><span class="tag">architecture</span> A single learnable number in the model. Includes weights and biases. "7B model" = 7 billion parameters. Each parameter is a weight value that gets multiplied during inference.</dd>
-
-  <dt id="perplexity">Perplexity</dt>
-  <dd><span class="tag">evaluation</span> A measure of how "surprised" a model is by text. Lower = better. A perplexity of 10 means the model is as uncertain as if it were choosing randomly among 10 equally likely options at each step. Quantization increases perplexity slightly — Q8_0 adds ~0.01-0.02; Q4_K_M adds ~0.05-0.15.</dd>
+<dt id="parameter">Parameter</dt>
+<dd><span class="tag">model</span>A learned value stored in a checkpoint, including weights and sometimes biases, scales, embeddings, or other learned tensors. Parameter count is not the same as artifact bytes or runtime memory.</dd>
+<dt id="pareto-point">Pareto Point</dt>
+<dd><span class="tag">decision</span>A candidate for which no measured alternative is at least as good on every chosen objective and strictly better on one. The objectives and uncertainty—quality, latency, memory, energy, or others—must be stated.</dd>
+<dt id="perplexity">Perplexity</dt>
+<dd><span class="tag">evaluation</span>The exponential of average negative log-likelihood over a token sequence. Lower is better on the measured distribution, but a small perplexity change does not guarantee unchanged downstream behavior.</dd>
 </dl>
 
-<!-- ==================== Q ==================== -->
 <h2 id="Q">Q</h2>
-
 <dl>
-  <dt id="gguf-quantization-levels">Q2_K, Q3_K_M, Q4_K_M, Q5_K_M, Q6_K, Q8_0</dt>
-  <dd><span class="tag">quantization</span> Standard GGUF quantization levels. The number = average bits per weight. K = K-quant superblock structure. M/S/L = size variant (medium/small/large — more or fewer weights at higher precision). _0 = legacy fixed-block format. See <a href="quantization-formats.html">Quantization Formats Reference</a> for the full table.</dd>
-
-  <dt id="quantization">Quantization</dt>
-  <dd><span class="tag">quantization</span> The process of reducing the precision of model weights — e.g., from 16-bit floats to 4-bit integers. Saves memory (4× smaller) at the cost of slightly "fuzzier" weights. Modern techniques use per-block scaling to minimize quality loss.</dd>
+<dt id="quantization">Quantization</dt>
+<dd><span class="tag">quantization</span>Representing values or computations with a restricted numeric encoding. Always identify the target—weights, activations, cache, or another tensor—plus mode, code width, grouping, calibration/importance procedure, and runtime support.</dd>
+<dt id="quantized-target">Quantized Target</dt>
+<dd><span class="tag">quantization</span>The values changed by quantization, such as weights, activations, KV cache, or selected tensors. “An 8-bit model” is incomplete unless the target and exceptions are stated.</dd>
 </dl>
 
-<!-- ==================== S ==================== -->
+<h2 id="R">R</h2>
+<dl>
+<dt id="retained-runtime-state">Retained Runtime State</dt>
+<dd><span class="tag">runtime state</span>State kept across generation steps so the engine does not recompute all prior work. A KV cache is one architecture-specific example; recurrent state and state-space state are different.</dd>
+<dt id="runtime-memory">Runtime Memory</dt>
+<dd><span class="tag">measurement</span>Memory allocated while the engine is loaded or generating: parameters, retained state, temporary workspaces, allocator overhead, executable resources, and sometimes duplicated buffers. Report the measurement boundary and whether it is peak or steady state.</dd>
+</dl>
+
 <h2 id="S">S</h2>
-
 <dl>
-  <dt id="scalar">Scalar</dt>
-  <dd><span class="tag">math</span> A 0-dimensional tensor: a single number. Example: <code>3.14</code>.</dd>
-
-  <dt id="scale-factor">Scale Factor</dt>
-  <dd><span class="tag">quantization</span> The high-precision (FP16) number stored alongside each block of quantized weights. It tells you how to map the stored integers back to real values: <code>real_value ≈ scale × integer_value</code>. One scale factor per block is what makes quantization work.</dd>
-
-  <dt id="softmax">Softmax</dt>
-  <dd><span class="tag">math</span> A function that converts a vector of arbitrary numbers into probabilities (all positive, sum to 1). Used in attention to compute "how much should I attend to each token" and at the output to get next-token probabilities.</dd>
+<dt id="scalar">Scalar</dt>
+<dd><span class="tag">math</span>A single value, often described as a rank-zero tensor in tensor libraries.</dd>
+<dt id="scale-factor">Scale Factor</dt>
+<dd><span class="tag">quantization</span>A value used to map between stored codes and reconstructed values. Schemes differ: some also use offsets/biases, zero points, codebooks, multiple scales, or nonuniform encodings.</dd>
+<dt id="softmax">Softmax</dt>
+<dd><span class="tag">math</span>A function that maps finite scores to positive values that sum to one. It is used in conventional attention and often in converting logits to probabilities, though sampling can apply additional transformations.</dd>
+<dt id="static-memory">Static Memory <span class="aka">loaded parameter memory</span></dt>
+<dd><span class="tag">measurement</span>Memory attributable to loaded model tensors under a declared engine and loading policy. It differs from on-disk artifact size and excludes runtime growth unless explicitly included.</dd>
 </dl>
 
-<!-- ==================== T ==================== -->
 <h2 id="T">T</h2>
-
 <dl>
-  <dt id="tensor">Tensor</dt>
-  <dd><span class="tag">math</span> A multi-dimensional grid of numbers. 0D = scalar, 1D = vector, 2D = matrix, 3D+ = higher-order tensor. In ML, "tensor" is used as the universal term for any multi-dimensional array of numbers flowing through the model.</dd>
-
-  <dt id="thinking-budget">Thinking Budget</dt>
-  <dd><span class="tag">inference</span> The maximum number of tokens a model can use for its internal chain-of-thought before producing a final answer. Increasing it gives the model more room to reason — but only if the reasoning is coherent. A quantized model with a large thinking budget may just produce more fuzzy thoughts, not better ones.</dd>
-
-  <dt id="thought-duplication">Thought Duplication</dt>
-  <dd><span class="tag">evaluation</span> When an LLM repeats the same reasoning pattern across multiple steps in an agentic loop. Measured as: <code>unique_thoughts / total_thoughts</code>. A ratio of 1.0 means clean, non-repeating reasoning. Values below 1.0 indicate the model is looping or re-treading old ground — a common failure mode for quantized models on long-horizon tasks.</dd>
-
-  <dt id="token">Token</dt>
-  <dd><span class="tag">general</span> The basic unit of text that an LLM processes. Not quite a word: "unbelievable" might be 3 tokens ("un", "believe", "able"). A model's vocabulary typically has 30k–250k tokens. Input text is tokenized before entering the embedding layer.</dd>
-
-  <dt id="transformer">Transformer</dt>
-  <dd><span class="tag">architecture</span> The neural network architecture underlying all modern LLMs. Introduced in 2017 ("Attention Is All You Need"). Core building block: alternating self-attention and feed-forward layers, wrapped with residual connections and layer normalization.</dd>
+<dt id="tensor">Tensor</dt>
+<dd><span class="tag">math</span>A multidimensional array with a shape and data type. Rank zero is a scalar, rank one a vector, and rank two a matrix; layouts and sparse/packed representations add implementation detail.</dd>
+<dt id="thinking-budget">Thinking Budget</dt>
+<dd><span class="tag">generation setting</span>A provider- or model-specific limit or control on reasoning-token use. It is not a universal Transformer field, and increasing it does not guarantee better results.</dd>
+<dt id="thought-duplication">Thought Duplication</dt>
+<dd><span class="tag">evaluation</span>An operational label for repeated reasoning content. It is meaningful only with a preregistered detection rule, unit of analysis, and validation; it must not be assumed to be caused by quantization without controlled evidence.</dd>
+<dt id="token">Token</dt>
+<dd><span class="tag">model</span>An integer ID produced by a tokenizer for a text or byte sequence. Token boundaries and vocabulary size depend on the exact tokenizer revision.</dd>
+<dt id="transformer">Transformer</dt>
+<dd><span class="tag">architecture</span>An architecture introduced in 2017 that composes attention, position-wise transformations, residual paths, and normalization. Many LLMs use Transformer variants, but recurrent, state-space, linear-attention, and hybrid language models also exist.</dd>
 </dl>
 
-<!-- ==================== V ==================== -->
 <h2 id="V">V</h2>
-
 <dl>
-  <dt id="vector">Vector</dt>
-  <dd><span class="tag">math</span> A 1-dimensional tensor: a list of numbers. Example: a word embedding like <code>[0.2, -0.5, 0.8, ...]</code> with d_model elements.</dd>
-
-  <dt id="vocabulary">Vocabulary <span class="aka">aka Vocab</span></dt>
-  <dd><span class="tag">general</span> The set of all tokens the model knows. Common sizes: 32k (Llama), 50k (GPT), 128k+ (modern multilingual models). The embedding table has one row per vocabulary entry.</dd>
+<dt id="vector">Vector</dt>
+<dd><span class="tag">math</span>A one-dimensional tensor. Its values have meaning only in the context of the operation, basis, and learned model.</dd>
+<dt id="vocabulary">Vocabulary <span class="aka">vocab</span></dt>
+<dd><span class="tag">model</span>The set of token IDs defined by a tokenizer/model pair. The exact tokenizer files and revision are part of checkpoint parity in a controlled comparison.</dd>
 </dl>
 
-<!-- ==================== W ==================== -->
 <h2 id="W">W</h2>
-
 <dl>
-  <dt id="weight">Weight</dt>
-  <dd><span class="tag">architecture</span> A learnable multiplier inside a layer. During inference: <code>output = weight × input (+ bias)</code>. Weights are the vast majority of parameters in an LLM and are the primary target of quantization.</dd>
+<dt id="weight">Weight</dt>
+<dd><span class="tag">model</span>A learned parameter used in an operation. Weight-only quantization changes selected stored weights while leaving activations or retained state at their configured formats unless stated otherwise.</dd>
 </dl>
-
-<hr>
-
-<div class="lesson-footer">
-  <p>
-    <a href="../lessons/0001-tensors-and-layers.html">Lesson 1</a> ·
-    <a href="../lessons/0002-how-quantization-works.html">Lesson 2</a> ·
-    <a href="../lessons/0003-quantization-in-practice.html">Lesson 3</a> ·
-    <a href="tensors-and-layers.html">Tensors &amp; Layers Ref</a> ·
-    <a href="quantization-formats.html">Quantization Formats Ref</a>
-  </p>
-  <p><em>Missing a term? Ask your agent teacher to add it.</em></p>
-</div>
-
+</main>
+<nav class="course-nav" aria-label="Footer"><a href="../index.html">← Course home</a><a href="../resources.html#canonical">Evidence ledger</a></nav>
 </body>
 </html>

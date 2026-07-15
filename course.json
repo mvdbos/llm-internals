@@ -4,8 +4,8 @@
     {
       "number": 1,
       "path": "lessons/0001-tensors-and-layers.html",
-      "title": "Tensors & Layers",
-      "minutes": 5
+      "title": "Tensors, Parameters, and Runtime State",
+      "minutes": 14
     },
     {
       "number": 2,

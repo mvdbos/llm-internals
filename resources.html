@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Resources — LLM Internals</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<h1>Resources</h1>
+
+<p><em>Curated, high-trust resources for learning about LLM internals and quantization.</em></p>
+
+<h2>Primary sources (text)</h2>
+
+<table>
+  <tr><th>Resource</th><th>Why it's good</th></tr>
+  <tr>
+    <td><a href="https://mljourney.com/quantized-llms-explained-q4-vs-q8-vs-fp16/">ML Journey: Quantized LLMs Explained (Q4 vs Q8 vs FP16)</a></td>
+    <td>Comprehensive, practical guide with decision framework. Good analogies (ruler). Covers group-wise, asymmetric quantization.</td>
+  </tr>
+  <tr>
+    <td><a href="https://medium.com/@paul.ilvez/demystifying-llm-quantization-suffixes-what-q4-k-m-q8-0-and-q6-k-really-mean-0ec2770f17d3">Demystifying LLM Quantization Suffixes</a></td>
+    <td>Explains GGUF suffixes (Q4_K_M, Q8_0, IQ3_XXS, etc.) and what the letters mean. Practical download decisions.</td>
+  </tr>
+  <tr>
+    <td><a href="https://llmhardware.io/guides/llm-quantization-guide">LLM Hardware Quantization Guide</a></td>
+    <td>Focused on VRAM formulas and hardware tradeoffs. Good for "which quant fits my GPU?"</td>
+  </tr>
+  <tr>
+    <td><a href="https://magazine.sebastianraschka.com/p/recent-developments-in-llm-architectures">Sebastian Raschka: Recent Developments in LLM Architectures</a></td>
+    <td>Deep technical but very clear. Covers layer types, KV sharing, MoE.</td>
+  </tr>
+</table>
+
+<h2>Primary sources (video)</h2>
+
+<table>
+  <tr><th>Resource</th><th>Why it's good</th></tr>
+  <tr>
+    <td><a href="https://www.youtube.com/watch?v=wjZofJX0v4M">3Blue1Brown: Transformers (Deep Learning Ch. 5)</a></td>
+    <td>The gold standard visual explanation of how data flows through transformer layers. Grant Sanderson.</td>
+  </tr>
+  <tr>
+    <td><a href="https://www.youtube.com/watch?v=zjkBMFhNj_g">Andrej Karpathy: Intro to Large Language Models</a></td>
+    <td>1-hour talk. Covers the full stack from training to inference, including quantization pragmatics.</td>
+  </tr>
+</table>
+
+<h2>Reference / canonical</h2>
+
+<table>
+  <tr><th>Resource</th><th>Why it's good</th></tr>
+  <tr>
+    <td><a href="https://github.com/ggerganov/llama.cpp">llama.cpp GGUF quantization types</a></td>
+    <td>The source of truth for what Q4_K_M, Q8_0, IQ3_XXS actually mean.</td>
+  </tr>
+  <tr>
+    <td><a href="https://jalammar.github.io/illustrated-transformer/">The Illustrated Transformer (Jay Alammar)</a></td>
+    <td>Classic visual walkthrough of transformer internals.</td>
+  </tr>
+</table>
+
+<h2>For later (wisdom / community)</h2>
+
+<table>
+  <tr><th>Resource</th><th>What it's for</th></tr>
+  <tr>
+    <td><strong>r/LocalLLaMA</strong></td>
+    <td>The go-to community for running models locally. Practical quantization advice, benchmarks, real-world experiences.</td>
+  </tr>
+  <tr>
+    <td><strong>Hugging Face model cards</strong></td>
+    <td>Per-model quantization benchmarks and community discussion in the comments.</td>
+  </tr>
+</table>
+
+<div class="lesson-footer">
+  <p><a href="index.html">← Home</a></p>
+</div>
+
+</body>
+</html>

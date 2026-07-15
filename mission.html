@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mission — LLM Internals</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<h1>Mission</h1>
+
+<p><strong>I want to understand LLM internals well enough to make smart quantization choices when running local models.</strong></p>
+
+<h2>Primary goal</h2>
+
+<p>When I see model options like <code>Q4_K_M</code>, <code>Q8_0</code>, <code>IQ3_XXS</code>, or <code>bf16</code>, I want to know what these actually mean — not just a rule of thumb, but the <em>why</em>. What trade-off am I making? When is 4-bit perfectly fine, and when is it hurting me?</p>
+
+<h2>Secondary goal</h2>
+
+<p>To get there, I need the prerequisite knowledge: what tensors and layers actually are inside an LLM. Not at a researcher level, but deep enough that quantization isn't just a magic compression knob.</p>
+
+<h2>Context</h2>
+
+<p>I run local models regularly (Qwen, DeepSeek variants) and have benchmarked 8-bit vs 4-bit for agentic SWE tasks. I've seen that quantization can degrade reasoning quality. I want to understand <em>why</em> that happens, so I can make better model choices without blind benchmarking every time.</p>
+
+<div class="lesson-footer">
+  <p><a href="index.html">← Home</a> · <a href="lessons/0001-tensors-and-layers.html">Start Lesson 1</a></p>
+</div>
+
+</body>
+</html>

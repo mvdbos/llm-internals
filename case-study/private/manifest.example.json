@@ -1,0 +1,58 @@
+{
+  "study": {
+    "checkpoint_alias": "dense-27b",
+    "architecture": "dense-hybrid",
+    "engine_alias": "omlx-0.5.1",
+    "conditions": {
+      "bf16": {
+        "scheme_alias": "bf16-weights"
+      },
+      "mlx-affine-int8-g64": {
+        "scheme_alias": "mlx-affine-int8-g64"
+      }
+    },
+    "task_aliases": [
+      "task-01",
+      "task-02",
+      "task-03",
+      "task-04",
+      "task-05"
+    ],
+    "repetitions": [1, 2, 3, 4]
+  },
+  "private_provenance": {
+    "checkpoint_source_revision": "<immutable-private-revision>",
+    "parity_status": "<verified-or-blocked>"
+  },
+  "private_condition_mapping": {
+    "bf16": {
+      "model_id": "<exact-local-model-id>"
+    },
+    "mlx-affine-int8-g64": {
+      "model_id": "<exact-local-model-id>"
+    }
+  },
+  "private_task_mapping": {
+    "task-01": {
+      "manifest_index": "<zero-based-private-index>",
+      "task_id": "<exact-private-task-id>"
+    }
+  },
+  "matrix": {
+    "execution": "sequential",
+    "condition_order": "odd repetitions bf16 first; even repetitions affine-8-bit first",
+    "expected_trials": 40
+  },
+  "trials": [
+    {
+      "checkpoint_alias": "dense-27b",
+      "architecture": "dense-hybrid",
+      "engine_alias": "omlx-0.5.1",
+      "precision_alias": "bf16",
+      "scheme_alias": "bf16-weights",
+      "task_alias": "task-01",
+      "repetition": 1,
+      "trial_path": "<absolute-private-pier-trial-directory>"
+    }
+  ]
+}

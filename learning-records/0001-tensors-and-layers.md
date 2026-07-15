@@ -3,6 +3,17 @@
 **Date:** 2026-07-13
 **Lesson:** [0001-tensors-and-layers.html](../lessons/0001-tensors-and-layers.html)
 
+## Revision status
+
+Superseded by the 2026 course audit. These notes preserve the original learning state but must not be treated as current evidence. Reassessment is required after the revised lesson.
+
+Retracted or uncertain claims in the preserved notes:
+
+- “Knowledge lives entirely in weights” is too absolute: parameters include an embedding lookup, while observed behavior also depends on architecture, tokenizer, context, decoding, and tools.
+- The simple embedding → identical Transformer layers → output stack is one architecture pattern, not a universal LLM description.
+- The 65% FFN parameter split and claimed universal FFN sensitivity/dominance were not sourced and vary by architecture.
+- The bytes-per-parameter memory shortcut omits encoding metadata, mixed/unquantized tensors, loaded representation, retained state, workspaces, and runtime overhead.
+
 ## What was learned
 
 - A tensor is just a multi-dimensional grid of numbers — the universal data format in ML

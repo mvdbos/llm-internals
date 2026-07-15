@@ -3,6 +3,19 @@
 **Date:** 2026-07-13
 **Lesson:** [0003-quantization-in-practice.html](../lessons/0003-quantization-in-practice.html)
 
+## Revision status
+
+Superseded by the 2026 course audit. These notes preserve the original learning state but must not be treated as current evidence. Reassessment is required after the revised lesson.
+
+Retracted or uncertain claims in the preserved notes:
+
+- The three-axis selection rule and task-sensitivity spectrum are incomplete and were presented as universal without evidence.
+- The 70% RAM rule, the claim that larger models tolerate lower precision, and the bf16/Q8/Q4 labels lacked backend, architecture, and accounting scope.
+- The “KV-cache snowball” mechanism was unsupported: a conventional cache stores retained keys/values, not accumulated attention scores, and cache format is a separate variable.
+- The thinking-budget conclusion and short-conversation claim were unsupported empirical generalizations.
+- The old 57% step comparison used unmatched tasks/repetitions and mixed architectures; no stored metric established “thought duplication,” so neither the percentage nor the causal explanation is valid evidence about quantization.
+- Steps alone are not output quality; controlled evaluation requires paired quality outcomes, verifier coverage, attrition rules, and uncertainty.
+
 ## What was learned
 
 - Quant selection is a 3-axis problem: task type, hardware budget, model size

@@ -3,6 +3,18 @@
 **Date:** 2026-07-13
 **Lesson:** [0002-how-quantization-works.html](../lessons/0002-how-quantization-works.html)
 
+## Revision status
+
+Superseded by the 2026 course audit. These notes preserve the original learning state but must not be treated as current evidence. Reassessment is required after the revised lesson.
+
+Retracted or uncertain claims in the preserved notes:
+
+- Quantization does not universally mean FP16 weights mapped to integers with one FP16 scale; targets, mappings, metadata, and exceptions differ.
+- GGUF/GGML/llama.cpp labels are backend-specific implementation concepts, not the portable quantization mechanism.
+- “IQ is smarter,” a universal tensor-sensitivity hierarchy, and a fixed attention/embedding/FFN precision recipe were unsupported generalizations.
+- The “community sweet spot,” creative-versus-agentic sensitivity ranking, and quoted perplexity bands lacked adequate source, model, dataset, and revision scope.
+- Existing Deep-SWE artifacts did not form a matched same-checkpoint comparison and therefore did not establish degradation caused by quantization.
+
 ## What was learned
 
 - Quantization maps FP16 weights to lower-bit integers using per-block scale factors

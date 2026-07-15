@@ -12,11 +12,11 @@
 <main>
 <p class="lesson-progress">Lesson 2 of 5 · ~15 min</p>
 <h1>Lesson 2: How Quantization Actually Works</h1>
-<p>Quantization is not “make every number less accurate.” It is a specified round trip: map selected real-valued numbers to a restricted set of codes, store those codes plus reconstruction metadata, then reconstruct or compute with approximations during inference.</p>
+<p><a href="../reference/glossary.html#quantization" class="glossary-link">Quantization</a> is not “make every number less accurate.” It is a specified round trip: map selected real-valued numbers to a restricted set of codes, store those codes plus reconstruction metadata, then reconstruct or compute with approximations during inference.</p>
 
 <h2>1. Start with the numeric format and target</h2>
 <p><a href="../reference/glossary.html#fp16" class="glossary-link">FP16</a> and <a href="../reference/glossary.html#bf16" class="glossary-link">bf16</a> both use 16 stored bits, but they are floating-point formats—not 65,536 linearly spaced values across one range. Their sign, exponent, and significand fields make representable values dense near zero and farther apart at larger magnitudes. FP16 allocates more significand bits and fewer exponent bits; bf16 allocates fewer significand bits and more exponent bits, so they trade local precision and numeric range differently.</p>
-<p><a href="../reference/glossary.html#quantization" class="glossary-link">Quantization</a> can change weights, activations, retained state, or another tensor. The <a href="../reference/glossary.html#quantized-target" class="glossary-link">quantized target</a> matters because each role has different values, lifetimes, and error paths. A weight-only conversion does not automatically quantize temporary activations or retained state.</p>
+<p>Quantization can change weights, activations, retained state, or another tensor. The <a href="../reference/glossary.html#quantized-target" class="glossary-link">quantized target</a> matters because each role has different values, lifetimes, and error paths. A weight-only conversion does not automatically quantize temporary activations or retained state.</p>
 <p>For every comparison, record:</p>
 <ul>
 <li>which tensor values are encoded;</li>
@@ -30,12 +30,12 @@
 <h2>2. The portable encode-store-decode loop</h2>
 <div class="pipeline" aria-label="Quantization round trip">
 <div class="pipeline-step"><strong>Choose a group</strong><br>A declared slice of values shares metadata</div>
-<div class="pipeline-step"><strong>Fit a mapping</strong><br>Select scale, <a href="../reference/glossary.html#offset" class="glossary-link">offset</a>, codebook, or other parameters</div>
+<div class="pipeline-step"><strong>Fit a mapping</strong><br>Select a <a href="../reference/glossary.html#scale-factor" class="glossary-link">scale</a>, <a href="../reference/glossary.html#offset" class="glossary-link">offset</a>, codebook, or other parameters</div>
 <div class="pipeline-step"><strong>Encode</strong><br>Map each original value to a restricted code</div>
 <div class="pipeline-step"><strong>Store</strong><br>Save codes plus all required metadata</div>
 <div class="pipeline-step"><strong>Reconstruct or compute</strong><br>Use approximate values during an operation</div>
 </div>
-<p>A <a href="../reference/glossary.html#scale-factor" class="glossary-link">scale factor</a> sets the spacing between representable levels in many mappings. An <a href="../reference/glossary.html#affine-quantization" class="glossary-link">affine mapping</a> also uses an offset or <a href="../reference/glossary.html#zero-point" class="glossary-link">zero point</a>. Codebook-based or floating encodings use different metadata. “Low-bit” describes the codes, not the complete storage or arithmetic.</p>
+<p>A scale factor sets the spacing between representable levels in many mappings. An <a href="../reference/glossary.html#affine-quantization" class="glossary-link">affine mapping</a> also uses an offset or <a href="../reference/glossary.html#zero-point" class="glossary-link">zero point</a>. Codebook-based or floating encodings use different metadata. “Low-bit” describes the codes, not the complete storage or arithmetic.</p>
 
 <h2>3. One complete two-bit affine round trip</h2>
 <p>Consider one group containing eight real values:</p>
@@ -50,7 +50,7 @@ reconstruct(q) = minimum + q × scale</code></pre>
 <div class="table-scroll" role="region" aria-label="Quantization round-trip example" tabindex="0">
 <p class="scroll-hint">Scroll horizontally to inspect every calculation.</p>
 <table>
-<caption>Pedagogical affine two-bit round trip for one four-value group</caption>
+<caption>Pedagogical affine two-bit round trip for one eight-value group; values calculated in this lesson, not empirical model evidence</caption>
 <thead><tr><th scope="col">Original value</th><th scope="col">Stored code</th><th scope="col">Reconstructed value</th><th scope="col">Signed error</th><th scope="col">Absolute error</th></tr></thead>
 <tbody>
 <tr><th scope="row">−1.00</th><td>0</td><td>−1.0000</td><td>0.0000</td><td>0.0000</td></tr>
@@ -76,7 +76,7 @@ reconstruct(q) = minimum + q × scale</code></pre>
 <p>A smaller <a href="../reference/glossary.html#group-size" class="glossary-link">group size</a> can adapt more closely to local value ranges, often reducing reconstruction error, but it repeats metadata more often. A larger group amortizes metadata over more values but can force outliers and small values to share one coarse mapping.</p>
 <p>That is why <a href="../reference/glossary.html#effective-bits-per-weight" class="glossary-link">effective bits per weight</a> can be higher than the nominal code width. The relevant calculation counts codes, metadata, and exceptions under one explicit accounting rule.</p>
 
-<h2>5. Symmetric, affine, and nonuniform mappings</h2>
+<h2>5. Compare mapping families</h2>
 <div class="table-scroll" role="region" aria-label="Portable mapping families" tabindex="0">
 <p class="scroll-hint">Scroll horizontally to compare mapping assumptions.</p>
 <table>

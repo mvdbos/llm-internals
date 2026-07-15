@@ -17,7 +17,7 @@
 <div class="table-scroll" role="region" aria-label="Quantization ecosystem layers" tabindex="0">
 <p class="scroll-hint">Scroll horizontally to inspect every layer.</p>
 <table>
-<caption>Artifact, encoding, recipe, engine, backend, and hardware are different choices</caption>
+<caption>Implementation taxonomy; GGML af97976c…, llama.cpp 3b532193…, MLX v0.32.0/7a1d4f5c…, and oMLX 5a39ba3a… examples are scoped in the evidence ledger</caption>
 <thead><tr><th scope="col">Layer</th><th scope="col">Question it answers</th><th scope="col">Examples</th></tr></thead>
 <tbody>
 <tr><th scope="row">Checkpoint</th><td>Which learned model state did conversion start from?</td><td>A pinned upstream snapshot and tokenizer revision</td></tr>
@@ -30,7 +30,7 @@
 </tbody>
 </table>
 </div>
-<div class="callout"><div class="callout-title">GGUF is not a runtime</div><p><strong>GGUF</strong> means <strong>GGML Universal File</strong>. It is a model-artifact format with metadata and typed tensors. llama.cpp is one engine ecosystem that reads GGUF. Do not call an MLX artifact “GGUF,” and do not reuse a GGML tensor label for a different MLX encoding.</p></div>
+<div class="callout"><div class="callout-title">GGUF is not a runtime</div><p><strong>GGUF</strong> means <strong>GGML Universal File</strong>. It is a model-artifact format with metadata and typed tensors. llama.cpp is one engine ecosystem that reads GGUF. Do not call an MLX artifact “GGUF,” and do not reuse a GGML tensor label for a different MLX encoding. <a href="../resources.html#canonical">Source: pinned GGUF specification and llama.cpp acronym documentation.</a></p></div>
 
 <h2>Nominal code width is not effective bits per weight</h2>
 <p>A low-bit code stores the per-value symbol. Real encodings also store block/group metadata and can leave selected tensors at other precisions.</p>
@@ -49,7 +49,7 @@ model_effective_bpw = 8 × counted_model_tensor_bytes ÷ declared_parameter_coun
 <div class="table-scroll" role="region" aria-label="Pinned effective bits per weight example" tabindex="0">
 <p class="scroll-hint">Scroll horizontally to compare code width and effective storage.</p>
 <table>
-<caption>Model-level effective bpw for one model and pinned llama.cpp revision</caption>
+<caption>Llama-3.1-8B model-level effective bpw from llama.cpp quantize README at commit 3b53219361a61b53e7741c479b81b755ec6096b1</caption>
 <thead><tr><th scope="col">llama.cpp output label</th><th scope="col">Kind</th><th scope="col">Effective bpw in pinned table</th><th scope="col">Interpretation</th></tr></thead>
 <tbody>
 <tr><th scope="row"><code>Q8_0</code></th><td>GGML tensor encoding used across eligible tensors</td><td>8.5008</td><td>Eight-bit codes plus per-block metadata and model-level exceptions</td></tr>
@@ -65,7 +65,7 @@ model_effective_bpw = 8 × counted_model_tensor_bytes ÷ declared_parameter_coun
 <div class="table-scroll" role="region" aria-label="Distinct eight-bit encodings" tabindex="0">
 <p class="scroll-hint">Scroll horizontally to compare the three encodings.</p>
 <table>
-<caption>Same broad bit-width category, different artifact and encoding semantics</caption>
+<caption>Versioned implementation comparison: GGML af97976c…, MLX v0.32.0/7a1d4f5c…, and oMLX oQ 5a39ba3a…; artifact scope in the evidence ledger</caption>
 <thead><tr><th scope="col">Name</th><th scope="col">Artifact/ecosystem</th><th scope="col">Grouping and metadata</th><th scope="col">What the name does not imply</th></tr></thead>
 <tbody>
 <tr><th scope="row"><code>Q8_0</code></th><td>GGML tensor type commonly stored in GGUF</td><td>Blocks of 32 values; one FP16 scale plus 32 signed 8-bit quants in the pinned GGML structure</td><td>Not MLX affine 8-bit and not current oQ8</td></tr>

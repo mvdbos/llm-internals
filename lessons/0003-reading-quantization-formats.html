@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Learn to read quantization labels by separating checkpoints, artifacts, tensor encodings, model-file recipes, engines, backends, kernels, and hardware.">
+<title>Lesson 3: Reading Quantization Formats</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<nav class="course-nav" aria-label="Lesson navigation"><a href="0002-how-quantization-works.html">← Previous: Mechanics</a><a href="../index.html">Course home</a><a href="0004-measuring-quantization-quality.html">Next: Controlled evaluation →</a></nav>
+<main>
+<p class="lesson-progress">Lesson 3 of 5 · ~10 min</p>
+<h1>Lesson 3: Reading Quantization Formats</h1>
+<p>Lesson 2 gave you implementation-independent mechanics. Real downloads add a naming problem: one short label can refer to an artifact type, a tensor encoding, a model-file recipe, or a precision category. This lesson gives each name one job.</p>
+
+<h2>1. Read the stack from checkpoint to hardware</h2>
+<p>A comparison begins with the same source checkpoint. Conversion produces a model <a href="../reference/glossary.html#artifact" class="glossary-link">artifact</a>. An <a href="../reference/glossary.html#inference-engine" class="glossary-link">inference engine</a> loads it, an execution <a href="../reference/glossary.html#backend" class="glossary-link">backend</a> schedules operations, and a device-specific <a href="../reference/glossary.html#kernel" class="glossary-link">kernel</a> executes each supported tensor layout.</p>
+<div class="pipeline" aria-label="Implementation stack">
+<div class="pipeline-step"><strong>Checkpoint</strong><br>Learned source state and tokenizer</div>
+<div class="pipeline-step"><strong>Artifact</strong><br>Packaged tensors and metadata</div>
+<div class="pipeline-step"><strong>Encoding/recipe</strong><br>Representation assigned to each target tensor</div>
+<div class="pipeline-step"><strong>Engine/backend</strong><br>Loader, scheduler, cache, and operations</div>
+<div class="pipeline-step"><strong>Kernel/hardware</strong><br>Actual instruction path and memory system</div>
+</div>
+<p>Skipping a layer creates false equivalences. Two files can start from the same checkpoint but use different tensor targets. Two encodings with similar nominal width can require different metadata. The same artifact can run differently across engine versions or hardware.</p>
+
+<h2>2. Give every label one category</h2>
+<div class="table-scroll" role="region" aria-label="Format label categories" tabindex="0">
+<p class="scroll-hint">Scroll horizontally to inspect every category.</p>
+<table>
+<caption>Versioned implementation examples; sources pinned in the evidence ledger</caption>
+<thead><tr><th scope="col">Label</th><th scope="col">Correct category</th><th scope="col">What it means in the pinned source</th><th scope="col">Common incorrect inference</th></tr></thead>
+<tbody>
+<tr><th scope="row">GGUF</th><td>Artifact/container format</td><td>A binary file with metadata and typed tensors; canonical expansion: GGML Universal File</td><td>“GGUF is an inference runtime” or “GGUF means quantized”</td></tr>
+<tr><th scope="row"><code>Q8_0</code></th><td>GGML tensor encoding</td><td>Blocks of 32 signed 8-bit codes with an FP16 scale in the pinned GGML structure</td><td>“Any eight-bit weight encoding is Q8_0”</td></tr>
+<tr><th scope="row"><code>Q6_K</code></th><td>GGML K-block tensor encoding</td><td>Six-bit payload represented with K-block super-block metadata</td><td>“Six nominal bits means exactly six effective bpw”</td></tr>
+<tr><th scope="row"><code>Q4_K_M</code></th><td>llama.cpp model-file output recipe</td><td>The pinned quantizer selects tensor encodings using tensor and architecture properties plus fallbacks</td><td>“Every tensor is uniform four-bit” or “the suffix defines one universal layer split”</td></tr>
+<tr><th scope="row"><code>IQ4_XS</code></th><td>GGML importance-aware encoding/recipe label</td><td>Uses specialized codebook/metadata and importance-aware quantization procedures</td><td>“The label guarantees better quality for every model and task”</td></tr>
+<tr><th scope="row">MLX affine 8-bit/group 64</th><td>MLX weight-quantization configuration</td><td>Affine mode, eight-bit codes, groups of 64, packed weights, scales, and biases</td><td>“This is GGML Q8_0” or “activations/cache are also eight-bit”</td></tr>
+<tr><th scope="row">Current oMLX oQ8</th><td>Versioned oQ model recipe</td><td>Current pinned documentation specifies MXFP8 with group size 32</td><td>“oQ8 means affine eight-bit/group 64”</td></tr>
+</tbody>
+</table>
+</div>
+<p><strong>Implementation source scope:</strong> the GGUF/GGML/llama.cpp rows are pinned to GGML commit <code>af97976c…</code> and llama.cpp commit <code>3b532193…</code>; MLX is pinned to v0.32.0/<code>7a1d4f5c…</code>; oMLX oQ is pinned to <code>5a39ba3a…</code>. Exact links and line ranges are in the <a href="../resources.html#canonical">canonical evidence ledger</a>.</p>
+
+<h2>3. A name is incomplete without its quantized target</h2>
+<p>The <a href="../reference/glossary.html#quantized-target" class="glossary-link">quantized target</a> might be all eligible weights, selected weight tensors, activations, or retained cache/state. Weight-only conversion is common, but it does not follow from “8-bit” alone. Read artifact metadata and the conversion code or command.</p>
+<div class="callout"><div class="callout-title">Minimum description</div><p>Prefer “weight-only affine 8-bit, group size 64, with named tensor exceptions” over “the 8-bit model.” The first description can be checked; the second cannot.</p></div>
+
+<h2>4. Nominal bits, raw-block bpw, and model-level bpw</h2>
+<p>A <a href="../reference/glossary.html#group-size" class="glossary-link">group size</a> or block size tells you how many values share metadata. The payload width does not include that metadata. A model-file <a href="../reference/glossary.html#mixed-precision-quantization" class="glossary-link">mixed-precision recipe</a> can also assign different encodings to different tensors.</p>
+<p><a href="../reference/glossary.html#effective-bits-per-weight" class="glossary-link">Effective bits per weight</a> counts the declared model tensor bytes, including encoding metadata and mixed/unquantized tensor storage, divided by parameter count. It is an accounting measurement, not a quality score.</p>
+<div class="table-scroll" role="region" aria-label="Pinned effective bpw table" tabindex="0">
+<p class="scroll-hint">Scroll horizontally to inspect the pinned model example.</p>
+<table>
+<caption>Empirical model-level effective bpw for Llama-3.1-8B in the llama.cpp README at commit 3b53219361a61b53e7741c479b81b755ec6096b1</caption>
+<thead><tr><th scope="col">Output label</th><th scope="col">Model-level effective bpw</th><th scope="col">Scope warning</th></tr></thead>
+<tbody>
+<tr><th scope="row"><code>Q8_0</code></th><td>8.5008</td><td>Model and revision-specific</td></tr>
+<tr><th scope="row"><code>Q6_K</code></th><td>6.5633</td><td>Model and revision-specific</td></tr>
+<tr><th scope="row"><code>Q4_K_M</code></th><td>4.8944</td><td>Mixture recipe, not one raw block type</td></tr>
+<tr><th scope="row"><code>IQ4_XS</code></th><td>4.4597</td><td>Model and revision-specific</td></tr>
+</tbody>
+</table>
+</div>
+<p>Use these numbers only to learn the distinction. For a new artifact, measure its own bytes and inspect its own tensor metadata.</p>
+
+<h2>5. The four criteria that determine a viable candidate</h2>
+<ol>
+<li><strong>Identity and provenance.</strong> Same source checkpoint and tokenizer? Pinned conversion tool, recipe, and artifact revision? If not, precision is confounded with model differences.</li>
+<li><strong>Representation and fit.</strong> Which targets changed, what metadata/exception mix is stored, and what are artifact, loaded, retained-state, and peak memory under the intended workload?</li>
+<li><strong>Execution support.</strong> Can the pinned engine/backend load every tensor type? Does target <a href="../reference/glossary.html#hardware" class="glossary-link">hardware</a> have native kernels, or does the path unpack, copy, dequantize, or fall back?</li>
+<li><strong>Measured outcomes.</strong> What are prefill/decode speed and paired task quality? Neither suffix nor file size supplies a universal ranking.</li>
+</ol>
+
+<h3>Kernel support can reverse a size-only prediction</h3>
+<p>A compact tensor encoding reduces memory traffic only if the execution path can exploit it. A fallback may unpack to a wider temporary representation, move work to another device, or use a slower kernel. Therefore measure both memory and speed on the intended stack.</p>
+
+<h2>6. Apply steps 1 and 3 of the decision procedure</h2>
+<p><strong>Identify:</strong> write the complete comparison tuple for each candidate.</p>
+<pre><code>checkpoint revision
+→ artifact format and revision
+→ quantized targets
+→ encoding mode, code width, group/block size, and exceptions
+→ model-file/calibration/importance recipe
+→ engine, backend, version, kernels, and hardware</code></pre>
+<p><strong>Shortlist:</strong> after Lesson 1's memory accounting, eliminate candidates that do not fit with headroom or lack correct loader/kernel support. Keep more than one supported candidate when quality is still unknown. Lesson 4 supplies the controlled evaluation.</p>
+
+<h2>Quiz: classify the label before comparing</h2>
+<fieldset class="quiz-question" data-quiz data-retry="true" id="quiz1">
+<legend>1. Which statement correctly classifies GGUF?</legend>
+<button type="button" class="quiz-option" data-correct="true" data-explanation="GGUF packages metadata and typed tensors; engines such as llama.cpp can load it, but the file format is not the engine.">It is a model-artifact format, not an inference engine.</button>
+<button type="button" class="quiz-option" data-correct="false" data-explanation="A GGUF artifact can contain tensors with multiple types, including unquantized types; the format does not imply one bit width.">It is a single weight encoding that makes every tensor four-bit.</button>
+<button type="button" class="quiz-option" data-correct="false" data-explanation="Kernel availability belongs to the engine/backend/hardware combination, not to the artifact-format name alone.">It is the hardware kernel used for all quantized operations.</button>
+<p class="quiz-feedback" role="status" tabindex="-1"></p><button type="button" class="quiz-reset" hidden>Try again</button>
+</fieldset>
+
+<fieldset class="quiz-question" data-quiz data-retry="true" id="quiz2">
+<legend>2. Why are GGML Q8_0 and MLX affine 8-bit/group 64 not interchangeable names?</legend>
+<button type="button" class="quiz-option" data-correct="false" data-explanation="Both can represent weights with eight-bit codes, but that broad similarity does not make their block/group metadata identical.">They differ only in spelling; both store the same block structure.</button>
+<button type="button" class="quiz-option" data-correct="true" data-explanation="They belong to different artifact/API ecosystems and define different grouping and reconstruction metadata.">They specify different encodings, grouping, metadata, and ecosystem scope.</button>
+<button type="button" class="quiz-option" data-correct="false" data-explanation="Neither name alone establishes that activations and retained cache are quantized.">One changes only activations; the other changes only retained cache.</button>
+<p class="quiz-feedback" role="status" tabindex="-1"></p><button type="button" class="quiz-reset" hidden>Try again</button>
+</fieldset>
+
+<fieldset class="quiz-question" data-quiz data-retry="true" id="quiz3">
+<legend>3. A smaller artifact loads successfully. What remains unproven?</legend>
+<button type="button" class="quiz-option" data-correct="false" data-explanation="Successful loading proves basic loader compatibility for this artifact, though not every operation's optimized path.">Whether the loader can parse the artifact at all.</button>
+<button type="button" class="quiz-option" data-correct="true" data-explanation="Native kernels, fallback behavior, peak memory, speed, and workload quality require their own checks.">Whether execution is efficient and task quality is acceptable.</button>
+<button type="button" class="quiz-option" data-correct="false" data-explanation="Artifact bytes are already measured by the premise; they do not prove runtime outcomes.">Whether the artifact uses fewer bytes on disk than the larger file.</button>
+<p class="quiz-feedback" role="status" tabindex="-1"></p><button type="button" class="quiz-reset" hidden>Try again</button>
+</fieldset>
+
+<h2>References and next step</h2>
+<ul>
+<li><a href="../reference/quantization-formats.html">Backend-aware artifact and encoding reference</a></li>
+<li><a href="../reference/quantization-decision-checklist.html">Five-step decision checklist</a></li>
+<li><a href="0004-measuring-quantization-quality.html">Lesson 4: Measuring Quantization Quality</a></li>
+</ul>
+<div class="terms-footer"><p><strong>Terms in this lesson:</strong> <a href="../reference/glossary.html#artifact">Artifact</a> · <a href="../reference/glossary.html#inference-engine">Inference engine</a> · <a href="../reference/glossary.html#backend">Backend</a> · <a href="../reference/glossary.html#kernel">Kernel</a> · <a href="../reference/glossary.html#quantized-target">Quantized target</a> · <a href="../reference/glossary.html#group-size">Group size</a> · <a href="../reference/glossary.html#mixed-precision-quantization">Mixed-precision quantization</a> · <a href="../reference/glossary.html#effective-bits-per-weight">Effective bits per weight</a> · <a href="../reference/glossary.html#hardware">Hardware</a></p></div>
+</main>
+<nav class="course-nav" aria-label="Lesson navigation"><a href="0002-how-quantization-works.html">← Previous: Mechanics</a><a href="../index.html">Course home</a><a href="0004-measuring-quantization-quality.html">Next: Controlled evaluation →</a></nav>
+<script src="../assets/quiz.js" defer></script>
+</body>
+</html>

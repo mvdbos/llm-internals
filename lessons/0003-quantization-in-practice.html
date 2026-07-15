@@ -170,32 +170,35 @@ For a model you want to run:
 
 <h2>Quiz</h2>
 
-<div class="quiz" id="quiz1">
-  <div class="quiz-question">Q1. In the agentic coding case study, switching from bf16 to 8-bit caused the model to take 57% more steps. What was the primary reason?</div>
-  <button class="quiz-option" data-correct="false">The model ran out of thinking budget and produced shorter responses</button>
-  <button class="quiz-option" data-correct="true">Systematic thought duplication — the model repeated itself in loops</button>
-  <button class="quiz-option" data-correct="false">The model became much slower per step due to dequantization overhead</button>
-  <button class="quiz-option" data-correct="false">The model hallucinated incorrect code syntax more often</button>
-  <div class="quiz-feedback" id="quiz1-feedback"></div>
-</div>
+<fieldset class="quiz-question" data-quiz data-retry="true" id="quiz1">
+  <legend>Q1. In the agentic coding case study, switching from bf16 to 8-bit caused the model to take 57% more steps. What was the primary reason?</legend>
+<button type="button" class="quiz-option" data-correct="false" data-explanation="This choice conflicts with the definition or calculation established in the lesson.">The model ran out of thinking budget and produced shorter responses</button>
+  <button type="button" class="quiz-option" data-correct="true" data-explanation="This choice matches the definition or calculation established in the lesson.">Systematic thought duplication — the model repeated itself in loops</button>
+  <button type="button" class="quiz-option" data-correct="false" data-explanation="This choice conflicts with the definition or calculation established in the lesson.">The model became much slower per step due to dequantization overhead</button>
+  <button type="button" class="quiz-option" data-correct="false" data-explanation="This choice conflicts with the definition or calculation established in the lesson.">The model hallucinated incorrect code syntax more often</button>
+  <p class="quiz-feedback" id="quiz1-feedback" role="status" tabindex="-1"></p>
+  <button type="button" class="quiz-reset" hidden>Try again</button>
+</fieldset>
 
-<div class="quiz" id="quiz2">
-  <div class="quiz-question">Q2. Why doesn't increasing the thinking budget fix quantization-related quality loss?</div>
-  <button class="quiz-option" data-correct="true">Quantization degrades the quality of each thought, not the number of thoughts</button>
-  <button class="quiz-option" data-correct="false">Thinking budget is capped by the model architecture regardless of quantization</button>
-  <button class="quiz-option" data-correct="false">The thinking budget is stored in the weights, which are themselves quantized</button>
-  <button class="quiz-option" data-correct="false">Most inference engines don't support configurable thinking budgets</button>
-  <div class="quiz-feedback" id="quiz2-feedback"></div>
-</div>
+<fieldset class="quiz-question" data-quiz data-retry="true" id="quiz2">
+  <legend>Q2. Why doesn't increasing the thinking budget fix quantization-related quality loss?</legend>
+<button type="button" class="quiz-option" data-correct="true" data-explanation="This choice matches the definition or calculation established in the lesson.">Quantization degrades the quality of each thought, not the number of thoughts</button>
+  <button type="button" class="quiz-option" data-correct="false" data-explanation="This choice conflicts with the definition or calculation established in the lesson.">Thinking budget is capped by the model architecture regardless of quantization</button>
+  <button type="button" class="quiz-option" data-correct="false" data-explanation="This choice conflicts with the definition or calculation established in the lesson.">The thinking budget is stored in the weights, which are themselves quantized</button>
+  <button type="button" class="quiz-option" data-correct="false" data-explanation="This choice conflicts with the definition or calculation established in the lesson.">Most inference engines don't support configurable thinking budgets</button>
+  <p class="quiz-feedback" id="quiz2-feedback" role="status" tabindex="-1"></p>
+  <button type="button" class="quiz-reset" hidden>Try again</button>
+</fieldset>
 
-<div class="quiz" id="quiz3">
-  <div class="quiz-question">Q3. For which workload is aggressive quantization (Q4 or lower) LEAST harmful?</div>
-  <button class="quiz-option" data-correct="false">Long-horizon agentic coding</button>
-  <button class="quiz-option" data-correct="false">Multi-step mathematical reasoning</button>
-  <button class="quiz-option" data-correct="true">Creative writing and brainstorming</button>
-  <button class="quiz-option" data-correct="false">Code review requiring precise bug detection</button>
-  <div class="quiz-feedback" id="quiz3-feedback"></div>
-</div>
+<fieldset class="quiz-question" data-quiz data-retry="true" id="quiz3">
+  <legend>Q3. For which workload is aggressive quantization (Q4 or lower) LEAST harmful?</legend>
+<button type="button" class="quiz-option" data-correct="false" data-explanation="This choice conflicts with the definition or calculation established in the lesson.">Long-horizon agentic coding</button>
+  <button type="button" class="quiz-option" data-correct="false" data-explanation="This choice conflicts with the definition or calculation established in the lesson.">Multi-step mathematical reasoning</button>
+  <button type="button" class="quiz-option" data-correct="true" data-explanation="This choice matches the definition or calculation established in the lesson.">Creative writing and brainstorming</button>
+  <button type="button" class="quiz-option" data-correct="false" data-explanation="This choice conflicts with the definition or calculation established in the lesson.">Code review requiring precise bug detection</button>
+  <p class="quiz-feedback" id="quiz3-feedback" role="status" tabindex="-1"></p>
+  <button type="button" class="quiz-reset" hidden>Try again</button>
+</fieldset>
 
 <h2>Take it further</h2>
 
@@ -229,24 +232,7 @@ For a model you want to run:
   </p>
 </div>
 
-<script>
-document.querySelectorAll('.quiz').forEach(quiz => {
-  const feedback = quiz.querySelector('.quiz-feedback');
-  quiz.querySelectorAll('.quiz-option').forEach(btn => {
-    btn.addEventListener('click', () => {
-      quiz.querySelectorAll('.quiz-option').forEach(b => {
-        b.classList.remove('correct', 'incorrect');
-        b.disabled = true;
-      });
-      const isCorrect = btn.dataset.correct === 'true';
-      btn.classList.add(isCorrect ? 'correct' : 'incorrect');
-      feedback.textContent = isCorrect
-        ? '✅ Correct!'
-        : '❌ Not quite — the correct answer is highlighted in green.';
-    });
-  });
-});
-</script>
+<script src="../assets/quiz.js" defer></script>
 
 </body>
 </html>

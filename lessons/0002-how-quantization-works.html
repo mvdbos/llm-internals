@@ -248,32 +248,35 @@ For agentic/general-purpose reasoning tasks:
 
 <h2>Quiz: Test yourself</h2>
 
-<div class="quiz" id="quiz1">
-  <div class="quiz-question">Q1. Why does quantization work at all? What's the key trick that makes 4-bit weights usable?</div>
-  <button class="quiz-option" data-correct="false">The model was trained with 4-bit weights from the start</button>
-  <button class="quiz-option" data-correct="false">Only unimportant layers are quantized; critical ones stay at FP16</button>
-  <button class="quiz-option" data-correct="true">Block-wise scaling: each group of weights shares a high-precision scale factor</button>
-  <button class="quiz-option" data-correct="false">The weights are averaged together and stored as a single value</button>
-  <div class="quiz-feedback" id="quiz1-feedback"></div>
-</div>
+<fieldset class="quiz-question" data-quiz data-retry="true" id="quiz1">
+  <legend>Q1. Why does quantization work at all? What's the key trick that makes 4-bit weights usable?</legend>
+<button type="button" class="quiz-option" data-correct="false" data-explanation="This choice conflicts with the definition or calculation established in the lesson.">The model was trained with 4-bit weights from the start</button>
+  <button type="button" class="quiz-option" data-correct="false" data-explanation="This choice conflicts with the definition or calculation established in the lesson.">Only unimportant layers are quantized; critical ones stay at FP16</button>
+  <button type="button" class="quiz-option" data-correct="true" data-explanation="This choice matches the definition or calculation established in the lesson.">Block-wise scaling: each group of weights shares a high-precision scale factor</button>
+  <button type="button" class="quiz-option" data-correct="false" data-explanation="This choice conflicts with the definition or calculation established in the lesson.">The weights are averaged together and stored as a single value</button>
+  <p class="quiz-feedback" id="quiz1-feedback" role="status" tabindex="-1"></p>
+  <button type="button" class="quiz-reset" hidden>Try again</button>
+</fieldset>
 
-<div class="quiz" id="quiz2">
-  <div class="quiz-question">Q2. What does the "K" in Q4_K_M stand for?</div>
-  <button class="quiz-option" data-correct="false">Kilobyte — it's measured in 1024-weight blocks</button>
-  <button class="quiz-option" data-correct="true">K-quant: uses different quantization strategies per layer type</button>
-  <button class="quiz-option" data-correct="false">Kernel — optimised for GPU kernel fusion</button>
-  <button class="quiz-option" data-correct="false">Knowledge — trained with knowledge distillation</button>
-  <div class="quiz-feedback" id="quiz2-feedback"></div>
-</div>
+<fieldset class="quiz-question" data-quiz data-retry="true" id="quiz2">
+  <legend>Q2. What does the "K" in Q4_K_M stand for?</legend>
+<button type="button" class="quiz-option" data-correct="false" data-explanation="This choice conflicts with the definition or calculation established in the lesson.">Kilobyte — it's measured in 1024-weight blocks</button>
+  <button type="button" class="quiz-option" data-correct="true" data-explanation="This choice matches the definition or calculation established in the lesson.">K-quant: uses different quantization strategies per layer type</button>
+  <button type="button" class="quiz-option" data-correct="false" data-explanation="This choice conflicts with the definition or calculation established in the lesson.">Kernel — optimised for GPU kernel fusion</button>
+  <button type="button" class="quiz-option" data-correct="false" data-explanation="This choice conflicts with the definition or calculation established in the lesson.">Knowledge — trained with knowledge distillation</button>
+  <p class="quiz-feedback" id="quiz2-feedback" role="status" tabindex="-1"></p>
+  <button type="button" class="quiz-reset" hidden>Try again</button>
+</fieldset>
 
-<div class="quiz" id="quiz3">
-  <div class="quiz-question">Q3. Which layers are MOST sensitive to quantization — where mistakes hurt the most?</div>
-  <button class="quiz-option" data-correct="false">Feed-forward layers — they hold most of the parameters</button>
-  <button class="quiz-option" data-correct="false">Attention layers — they compare token similarities</button>
-  <button class="quiz-option" data-correct="true">Embedding and output layers — they define the token space itself</button>
-  <button class="quiz-option" data-correct="false">All layers are equally sensitive — it's uniform</button>
-  <div class="quiz-feedback" id="quiz3-feedback"></div>
-</div>
+<fieldset class="quiz-question" data-quiz data-retry="true" id="quiz3">
+  <legend>Q3. Which layers are MOST sensitive to quantization — where mistakes hurt the most?</legend>
+<button type="button" class="quiz-option" data-correct="false" data-explanation="This choice conflicts with the definition or calculation established in the lesson.">Feed-forward layers — they hold most of the parameters</button>
+  <button type="button" class="quiz-option" data-correct="false" data-explanation="This choice conflicts with the definition or calculation established in the lesson.">Attention layers — they compare token similarities</button>
+  <button type="button" class="quiz-option" data-correct="true" data-explanation="This choice matches the definition or calculation established in the lesson.">Embedding and output layers — they define the token space itself</button>
+  <button type="button" class="quiz-option" data-correct="false" data-explanation="This choice conflicts with the definition or calculation established in the lesson.">All layers are equally sensitive — it's uniform</button>
+  <p class="quiz-feedback" id="quiz3-feedback" role="status" tabindex="-1"></p>
+  <button type="button" class="quiz-reset" hidden>Try again</button>
+</fieldset>
 
 <h2>Dig deeper</h2>
 
@@ -309,25 +312,7 @@ For agentic/general-purpose reasoning tasks:
   </p>
 </div>
 
-<script>
-// Quiz logic
-document.querySelectorAll('.quiz').forEach(quiz => {
-  const feedback = quiz.querySelector('.quiz-feedback');
-  quiz.querySelectorAll('.quiz-option').forEach(btn => {
-    btn.addEventListener('click', () => {
-      quiz.querySelectorAll('.quiz-option').forEach(b => {
-        b.classList.remove('correct', 'incorrect');
-        b.disabled = true;
-      });
-      const isCorrect = btn.dataset.correct === 'true';
-      btn.classList.add(isCorrect ? 'correct' : 'incorrect');
-      feedback.textContent = isCorrect
-        ? '✅ Correct!'
-        : '❌ Not quite — the correct answer is highlighted in green.';
-    });
-  });
-});
-</script>
+<script src="../assets/quiz.js" defer></script>
 
 </body>
 </html>

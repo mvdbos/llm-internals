@@ -107,32 +107,35 @@ Words → [<a href="../reference/glossary.html#E" class="glossary-link">Embeddin
 
 <h2>Quiz: Test yourself</h2>
 
-<div class="quiz" id="quiz1">
-  <div class="quiz-question">Q1. In an LLM, where does the "knowledge" actually live?</div>
-  <button class="quiz-option" data-correct="false">In the embedding layer — that's where words get their meaning</button>
-  <button class="quiz-option" data-correct="false">In the output layer — that's where word predictions are made</button>
-  <button class="quiz-option" data-correct="true">In the weights spread across all the layers</button>
-  <button class="quiz-option" data-correct="false">In a separate database the model references during inference</button>
-  <div class="quiz-feedback" id="quiz1-feedback"></div>
-</div>
+<fieldset class="quiz-question" data-quiz data-retry="true" id="quiz1">
+  <legend>Q1. In an LLM, where does the "knowledge" actually live?</legend>
+<button type="button" class="quiz-option" data-correct="false" data-explanation="This choice conflicts with the definition or calculation established in the lesson.">In the embedding layer — that's where words get their meaning</button>
+  <button type="button" class="quiz-option" data-correct="false" data-explanation="This choice conflicts with the definition or calculation established in the lesson.">In the output layer — that's where word predictions are made</button>
+  <button type="button" class="quiz-option" data-correct="true" data-explanation="This choice matches the definition or calculation established in the lesson.">In the weights spread across all the layers</button>
+  <button type="button" class="quiz-option" data-correct="false" data-explanation="This choice conflicts with the definition or calculation established in the lesson.">In a separate database the model references during inference</button>
+  <p class="quiz-feedback" id="quiz1-feedback" role="status" tabindex="-1"></p>
+  <button type="button" class="quiz-reset" hidden>Try again</button>
+</fieldset>
 
-<div class="quiz" id="quiz2">
-  <div class="quiz-question">Q2. A 7B parameter model at 16-bit uses ~14 GB. Roughly how much at 4-bit?</div>
-  <button class="quiz-option" data-correct="false">~7 GB (half)</button>
-  <button class="quiz-option" data-correct="true">~3.5 GB (quarter)</button>
-  <button class="quiz-option" data-correct="false">~1.75 GB (eighth)</button>
-  <button class="quiz-option" data-correct="false">~10 GB (can't compress that much)</button>
-  <div class="quiz-feedback" id="quiz2-feedback"></div>
-</div>
+<fieldset class="quiz-question" data-quiz data-retry="true" id="quiz2">
+  <legend>Q2. A 7B parameter model at 16-bit uses ~14 GB. Roughly how much at 4-bit?</legend>
+<button type="button" class="quiz-option" data-correct="false" data-explanation="This choice conflicts with the definition or calculation established in the lesson.">~7 GB (half)</button>
+  <button type="button" class="quiz-option" data-correct="true" data-explanation="This choice matches the definition or calculation established in the lesson.">~3.5 GB (quarter)</button>
+  <button type="button" class="quiz-option" data-correct="false" data-explanation="This choice conflicts with the definition or calculation established in the lesson.">~1.75 GB (eighth)</button>
+  <button type="button" class="quiz-option" data-correct="false" data-explanation="This choice conflicts with the definition or calculation established in the lesson.">~10 GB (can't compress that much)</button>
+  <p class="quiz-feedback" id="quiz2-feedback" role="status" tabindex="-1"></p>
+  <button type="button" class="quiz-reset" hidden>Try again</button>
+</fieldset>
 
-<div class="quiz" id="quiz3">
-  <div class="quiz-question">Q3. What is a tensor, in the simplest terms?</div>
-  <button class="quiz-option" data-correct="false">A special kind of GPU instruction</button>
-  <button class="quiz-option" data-correct="false">A mathematical proof that the model converges</button>
-  <button class="quiz-option" data-correct="true">A grid of numbers flowing through the model</button>
-  <button class="quiz-option" data-correct="false">The file format models are saved in</button>
-  <div class="quiz-feedback" id="quiz3-feedback"></div>
-</div>
+<fieldset class="quiz-question" data-quiz data-retry="true" id="quiz3">
+  <legend>Q3. What is a tensor, in the simplest terms?</legend>
+<button type="button" class="quiz-option" data-correct="false" data-explanation="This choice conflicts with the definition or calculation established in the lesson.">A special kind of GPU instruction</button>
+  <button type="button" class="quiz-option" data-correct="false" data-explanation="This choice conflicts with the definition or calculation established in the lesson.">A mathematical proof that the model converges</button>
+  <button type="button" class="quiz-option" data-correct="true" data-explanation="This choice matches the definition or calculation established in the lesson.">A grid of numbers flowing through the model</button>
+  <button type="button" class="quiz-option" data-correct="false" data-explanation="This choice conflicts with the definition or calculation established in the lesson.">The file format models are saved in</button>
+  <p class="quiz-feedback" id="quiz3-feedback" role="status" tabindex="-1"></p>
+  <button type="button" class="quiz-reset" hidden>Try again</button>
+</fieldset>
 
 <h2>Dig deeper</h2>
 
@@ -165,26 +168,7 @@ Words → [<a href="../reference/glossary.html#E" class="glossary-link">Embeddin
   </p>
 </div>
 
-<script>
-// Quiz logic
-document.querySelectorAll('.quiz').forEach(quiz => {
-  const feedback = quiz.querySelector('.quiz-feedback');
-  quiz.querySelectorAll('.quiz-option').forEach(btn => {
-    btn.addEventListener('click', () => {
-      // Reset all buttons in this quiz
-      quiz.querySelectorAll('.quiz-option').forEach(b => {
-        b.classList.remove('correct', 'incorrect');
-        b.disabled = true;
-      });
-      const isCorrect = btn.dataset.correct === 'true';
-      btn.classList.add(isCorrect ? 'correct' : 'incorrect');
-      feedback.textContent = isCorrect
-        ? '✅ Correct!'
-        : '❌ Not quite — the correct answer is highlighted in green.';
-    });
-  });
-});
-</script>
+<script src="../assets/quiz.js" defer></script>
 
 </body>
 </html>

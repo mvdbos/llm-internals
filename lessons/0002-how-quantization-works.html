@@ -145,12 +145,21 @@ Error: 0.36 - 0.31 = 0.05  (off by 5 hundredths)</code></pre>
 
 <h2>Two ways to measure quantization quality</h2>
 
-<p>"Does quantization hurt my model?" The answer depends entirely on <em>how</em> you measure. There are two lenses, and they tell different stories. Which one matters for you depends on your workload.</p>
+<p>"Does quantization hurt my model?" The answer depends entirely on <em>how</em> you measure. There are two lenses, and they tell different stories.</p>
+
+<div class="callout">
+  <div class="callout-title">📋 Quick summary</div>
+  <p><strong>Chat, writing, Q&A?</strong> → Lens 1 (Perplexity) is your signal.<br>
+  <strong>Coding, debugging, agentic loops?</strong> → Lens 2 (Task Completion) is your signal.<br>
+  <strong>Both?</strong> Read both — a quant that's fine for chat may fail on coding loops.</p>
+</div>
+
+<p>Which one matters for you depends on your workload.</p>
 
 <div class="callout">
   <div class="callout-title">🔬 Lens 1: Perplexity</div>
+  <p><strong>→ Most relevant for:</strong> chat, creative writing, summarization, single-shot Q&A, classification.</p>
   <p><strong>Token-level prediction accuracy</strong> — how surprised the model is by real text, averaged across many passages. A perplexity of 10 means the model is as uncertain as if it were choosing randomly among 10 options at each word.</p>
-  <p><strong>Most relevant for:</strong> chat, creative writing, summarization, single-shot Q&A, classification.</p>
   <p><strong>Why:</strong> These tasks are one or two reasoning hops. Errors don't compound — each output stands alone. <a href="../reference/glossary.html#P" class="glossary-link">Perplexity</a> captures the slight "fuzz" that quantization adds to every token prediction and tells you how much general language quality you're losing.</p>
   <p><strong>Cheap to measure</strong> — just run text through the model.</p>
   <table>
@@ -166,8 +175,8 @@ Error: 0.36 - 0.31 = 0.05  (off by 5 hundredths)</code></pre>
 
 <div class="callout">
   <div class="callout-title">🔧 Lens 2: Task Completion</div>
+  <p><strong>→ Most relevant for:</strong> agentic coding, multi-step reasoning, debugging, long-horizon planning, SWE benchmarks.</p>
   <p><strong>End-to-end success</strong> — did the model solve the task correctly? In how many steps? Did it loop, lose track, or follow a wrong diagnostic path?</p>
-  <p><strong>Most relevant for:</strong> agentic coding, multi-step reasoning, debugging, long-horizon planning, SWE benchmarks.</p>
   <p><strong>Why:</strong> These tasks span 50–200+ steps. A small error on step 1 alters step 2's input, which alters step 3's output, and so on. Perplexity can't see this compounding because it measures one token at a time. The per-step degradation is invisible to perplexity but dominates agentic performance.</p>
   <p><strong>Expensive to measure</strong> — needs a task environment, test suite, and trajectory analysis. But it's the only signal that matters for agentic workloads.</p>
   <table>

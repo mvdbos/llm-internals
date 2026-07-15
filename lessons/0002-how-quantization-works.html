@@ -13,11 +13,11 @@
 
 <h2>What quantization does</h2>
 
-<p>Every weight in an LLM is stored as a number. At FP16, each number uses <strong>16 bits</strong> (2 bytes). Quantization says: "what if we stored each weight in <strong>fewer bits</strong>?"</p>
+<p>Every weight in an LLM is stored as a number. At <a href="../reference/glossary.html#F" class="glossary-link">FP16</a>, each number uses <strong>16 bits</strong> (2 bytes). <a href="../reference/glossary.html#Q" class="glossary-link">Quantization</a> says: "what if we stored each weight in <strong>fewer bits</strong>?"</p>
 
 <table>
   <tr><th>Format</th><th>Bits per weight</th><th>Distinct values</th><th>Analogy</th></tr>
-  <tr><td>FP16</td><td>16</td><td>65,536 (in any range)</td><td>Measuring to the millimeter</td></tr>
+  <tr><td><a href="../reference/glossary.html#F" class="glossary-link">FP16</a></td><td>16</td><td>65,536 (in any range)</td><td>Measuring to the millimeter</td></tr>
   <tr><td>Q8 (8-bit)</td><td>8</td><td>256</td><td>Measuring to the centimeter</td></tr>
   <tr><td>Q4 (4-bit)</td><td>4</td><td>16</td><td>Measuring to the nearest 10 cm</td></tr>
   <tr><td>Q2 (2-bit)</td><td>2</td><td>4</td><td>Measuring to the nearest half-meter</td></tr>
@@ -101,7 +101,7 @@ Error: 0.36 - 0.31 = 0.05  (off by 5 hundredths)</code></pre>
 
 <p>Block size is a tunable parameter. <code>Q8_0</code> uses blocks of 32. K-quants use a hierarchical "superblock" structure (256 weights split into sub-blocks) to get even finer-grained scaling where it matters. The larger the block, the better the compression but the coarser the mapping — 32 is a pragmatic balance.</p>
 
-<h2>Decoding the GGUF suffixes</h2>
+<h2>Decoding the <a href="../reference/glossary.html#G" class="glossary-link">GGUF</a> suffixes</h2>
 
 <p>When you download models from Hugging Face, you see filenames like <code>Q4_K_M</code>, <code>Q8_0</code>, <code>IQ3_XXS</code>. Here's what they mean:</p>
 
@@ -111,7 +111,7 @@ Error: 0.36 - 0.31 = 0.05  (off by 5 hundredths)</code></pre>
   <tr><td><code>Q8_0</code></td><td>8</td><td>~7 GB</td><td>8-bit with block size 32. Minimal quality loss (1-2%).</td></tr>
   <tr><td><code>Q6_K</code></td><td>6</td><td>~5.3 GB</td><td>6-bit with K-quant superblock. Very good quality.</td></tr>
   <tr><td><code>Q5_K_M</code></td><td>5</td><td>~4.5 GB</td><td>5-bit K-quant, medium size. Good balance point.</td></tr>
-  <tr><td><code>Q4_K_M</code></td><td>4</td><td>~3.8 GB</td><td>4-bit K-quant, medium. <strong>The community sweet spot.</strong></td></tr>
+  <tr><td><code><a href="../reference/glossary.html#K" class="glossary-link">Q4_K_M</a></code></td><td>4</td><td>~3.8 GB</td><td>4-bit K-quant, medium. <strong>The community sweet spot.</strong></td></tr>
   <tr><td><code>IQ4_XS</code></td><td>4</td><td>~3.5 GB</td><td>4-bit importance-weighted. Smarter than Q4_K_M for some models.</td></tr>
   <tr><td><code>Q3_K_M</code></td><td>3</td><td>~3.1 GB</td><td>3-bit. Quality loss becomes noticeable for reasoning.</td></tr>
   <tr><td><code>IQ3_XXS</code></td><td>~3</td><td>~2.9 GB</td><td>Aggressively compressed. Noticeable quality loss on complex tasks.</td></tr>
@@ -123,8 +123,8 @@ Error: 0.36 - 0.31 = 0.05  (off by 5 hundredths)</code></pre>
 <table>
   <tr><th>Letter</th><th>Meaning</th></tr>
   <tr><td><code>Q</code></td><td>Traditional linear quantization (evenly-spaced buckets)</td></tr>
-  <tr><td><code>IQ</code></td><td><strong>Importance-weighted</strong> quantization. Smarter: gives more precision to important weights. Usually better than Q at the same bit-width.</td></tr>
-  <tr><td><code>K</code></td><td><strong>K-quant</strong>: uses different block sizes for different layer types (attention gets different treatment than FFN)</td></tr>
+  <tr><td><code>IQ</code></td><td><strong><a href="../reference/glossary.html#I" class="glossary-link">Importance-weighted</a></strong> quantization. Smarter: gives more precision to important weights. Usually better than Q at the same bit-width.</td></tr>
+  <tr><td><code>K</code></td><td><strong><a href="../reference/glossary.html#K" class="glossary-link">K-quant</a></strong>: uses different block sizes for different layer types (attention gets different treatment than FFN)</td></tr>
   <tr><td><code>_0</code></td><td>Legacy format, fixed block size (usually 32)</td></tr>
   <tr><td><code>_S / _M / _L</code></td><td>Small / Medium / Large. Controls how many weights get higher precision within the mix. Larger = more weights at higher bits = bigger file but better quality.</td></tr>
   <tr><td><code>_XS / _XXS</code></td><td>Extra-small variants (IQ only). Even more aggressive compression.</td></tr>
@@ -137,15 +137,15 @@ Error: 0.36 - 0.31 = 0.05  (off by 5 hundredths)</code></pre>
 <table>
   <tr><th>Layer type</th><th>Sensitivity to quantization</th><th>Why</th></tr>
   <tr><td>Feed-forward (FFN)</td><td>🟢 Low</td><td>Massive redundancy. You can cut precision aggressively before quality drops.</td></tr>
-  <tr><td>Attention (Q/K/V)</td><td>🟡 Medium</td><td>Precision matters for comparing token similarities. Q4_K still works well though.</td></tr>
-  <tr><td>Embedding / Output</td><td>🔴 High</td><td>These define the token space. Errors here directly affect which words the model can distinguish.</td></tr>
+  <tr><td><a href="../reference/glossary.html#A" class="glossary-link">Attention</a> (Q/K/V)</td><td>🟡 Medium</td><td>Precision matters for comparing token similarities. Q4_K still works well though.</td></tr>
+  <tr><td><a href="../reference/glossary.html#E" class="glossary-link">Embedding</a> / Output</td><td>🔴 High</td><td>These define the token space. Errors here directly affect which words the model can distinguish.</td></tr>
 </table>
 
 <p>This is why <strong>K-quants</strong> exist — they give more bits to sensitive layers and fewer to FFN layers. A <code>Q4_K_M</code> might use 6-bit for attention, 4-bit for FFN, and 6-bit for embeddings, averaging to ~4.6 bits overall.</p>
 
 <div class="callout">
 <div class="callout-title">📖 A quick word on perplexity</div>
-<p><strong>Perplexity</strong> is the standard metric for measuring language model quality. It answers: "how surprised is the model by real text?" Lower is better. A perplexity of 10 means the model is as uncertain as if it were choosing randomly among 10 equally likely options at each word. A perfect model would have perplexity near 1. When we say quantization "adds 0.05 to perplexity," we mean the model became slightly more surprised — equivalent to having half an extra option in its guessing game.</p>
+<p><strong><a href="../reference/glossary.html#P" class="glossary-link">Perplexity</a></strong> is the standard metric for measuring language model quality. It answers: "how surprised is the model by real text?" Lower is better. A perplexity of 10 means the model is as uncertain as if it were choosing randomly among 10 equally likely options at each word. A perfect model would have perplexity near 1. When we say quantization "adds 0.05 to perplexity," we mean the model became slightly more surprised — equivalent to having half an extra option in its guessing game.</p>
 </div>
 
 <div class="callout">
@@ -231,6 +231,23 @@ For agentic/general-purpose reasoning tasks:
 <div class="lesson-footer">
   <p><a href="0001-tensors-and-layers.html">← Lesson 1: Tensors &amp; Layers</a> · Lesson 2 of the LLM Internals series</p>
   <p><em>Questions? Ask your agent teacher. I can explain any of this in detail or show you concrete examples from your own models.</em></p>
+</div>
+
+<div class="terms-footer">
+  <p><strong>📖 Terms in this lesson:</strong>
+    <a href="../reference/glossary.html#Q">Quantization</a> ·
+    <a href="../reference/glossary.html#F">FP16</a> ·
+    <a href="../reference/glossary.html#S">Scale Factor</a> ·
+    <a href="../reference/glossary.html#B">Block-wise Quantization</a> ·
+    <a href="../reference/glossary.html#G">GGUF</a> ·
+    <a href="../reference/glossary.html#K">K-quant</a> ·
+    <a href="../reference/glossary.html#I">IQ (Importance-Weighted)</a> ·
+    <a href="../reference/glossary.html#P">Perplexity</a> ·
+    <a href="../reference/glossary.html#E">Embedding</a> ·
+    <a href="../reference/glossary.html#A">Attention</a> ·
+    <a href="../reference/glossary.html#F">FFN</a> ·
+    <a href="../reference/glossary.html#M">Mixed-Precision Quantization</a>
+  </p>
 </div>
 
 <script>

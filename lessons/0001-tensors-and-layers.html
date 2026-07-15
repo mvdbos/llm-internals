@@ -13,20 +13,20 @@
 
 <h2>What's a tensor?</h2>
 
-<p>A <strong>tensor</strong> is just a grid of numbers. Nothing scarier than that.</p>
+<p>A <strong><a href="../reference/glossary.html#T" class="glossary-link">tensor</a></strong> is just a grid of numbers. Nothing scarier than that.</p>
 
 <p>You already know tensors, even if nobody called them that:</p>
 
 <table>
   <tr><th>Dimension</th><th>Name</th><th>What it looks like</th><th>Example</th></tr>
   <tr>
-    <td>0D</td><td>Scalar</td><td>A single number</td><td><code>42</code></td>
+    <td>0D</td><td><a href="../reference/glossary.html#S" class="glossary-link">Scalar</a></td><td>A single number</td><td><code>42</code></td>
   </tr>
   <tr>
-    <td>1D</td><td>Vector</td><td>A row of numbers</td><td><code>[0.2, 0.8, -0.5]</code></td>
+    <td>1D</td><td><a href="../reference/glossary.html#V" class="glossary-link">Vector</a></td><td>A row of numbers</td><td><code>[0.2, 0.8, -0.5]</code></td>
   </tr>
   <tr>
-    <td>2D</td><td>Matrix</td><td>A table of numbers</td><td>A spreadsheet grid</td>
+    <td>2D</td><td><a href="../reference/glossary.html#M" class="glossary-link">Matrix</a></td><td>A table of numbers</td><td>A spreadsheet grid</td>
   </tr>
   <tr>
     <td>3D+</td><td>Tensor</td><td>A cube (or more) of numbers</td><td>A stack of spreadsheets</td>
@@ -41,15 +41,15 @@
 
 <h2>What's a layer?</h2>
 
-<p>A <strong>layer</strong> is one of those stations. It takes a tensor in, does math to it, and spits a (usually different) tensor out.</p>
+<p>A <strong><a href="../reference/glossary.html#L" class="glossary-link">layer</a></strong> is one of those stations. It takes a tensor in, does math to it, and spits a (usually different) tensor out.</p>
 
 <pre><code>Input tensor  →  [ Layer: math operations ]  →  Output tensor</code></pre>
 
 <p>What math? Mostly two things:</p>
 
 <ol>
-  <li><strong>Multiply</strong> the input numbers by a set of stored numbers called <em>weights</em></li>
-  <li><strong>Add</strong> some more stored numbers called <em>biases</em></li>
+  <li><strong>Multiply</strong> the input numbers by a set of stored numbers called <em><a href="../reference/glossary.html#W" class="glossary-link">weights</a></em></li>
+  <li><strong>Add</strong> some more stored numbers called <em><a href="../reference/glossary.html#B" class="glossary-link">biases</a></em></li>
 </ol>
 
 <p>The <strong>weights</strong> are the "knowledge" of the layer — they're what the model learned during training. When you download an LLM, you're downloading billions of these weight numbers.</p>
@@ -64,8 +64,8 @@
 <p>An LLM is a <strong>stack of layers</strong>. Like this:</p>
 
 <pre><code>
-Words → [Embedding layer] → [Layer 1] → [Layer 2] → ... → [Layer N] → [Output layer] → Next word
-         (words→numbers)     (transformer blocks — the "thinking")      (numbers→word predictions)
+Words → [<a href="../reference/glossary.html#E" class="glossary-link">Embedding layer</a>] → [Layer 1] → [Layer 2] → ... → [Layer N] → [<a href="../reference/glossary.html#O" class="glossary-link">Output layer</a>] → Next word
+         (words→numbers)     (<a href="../reference/glossary.html#T" class="glossary-link">transformer</a> blocks — the "thinking")      (numbers→word predictions)
 </code></pre>
 
 <p>Let's break each part down:</p>
@@ -73,17 +73,17 @@ Words → [Embedding layer] → [Layer 1] → [Layer 2] → ... → [Layer N] �
 <table>
   <tr><th>Part</th><th>What it does</th><th>ELI5</th></tr>
   <tr>
-    <td>Embedding layer</td>
+    <td><a href="../reference/glossary.html#E" class="glossary-link">Embedding layer</a></td>
     <td>Converts each word into a tensor (a vector of ~4096 or ~8192 numbers)</td>
     <td>Turns "cat" into a fingerprint of numbers that captures what "cat" means</td>
   </tr>
   <tr>
-    <td>Transformer layers</td>
+    <td><a href="../reference/glossary.html#T" class="glossary-link">Transformer</a> layers</td>
     <td>The bulk of the model. Each layer mixes information between words and transforms the representations. A 7B model might have 32 of these.</td>
     <td>32 rounds of "think about this word in context of all the other words"</td>
   </tr>
   <tr>
-    <td>Output layer</td>
+    <td><a href="../reference/glossary.html#O" class="glossary-link">Output layer</a></td>
     <td>Converts the final tensor back into a probability for each possible next word</td>
     <td>After all that thinking: "the next word is probably 'sat' (followed by 'on', 'the', 'mat')"</td>
   </tr>
@@ -91,14 +91,14 @@ Words → [Embedding layer] → [Layer 1] → [Layer 2] → ... → [Layer N] �
 
 <h2>Why this matters for quantization</h2>
 
-<p>Every one of those layers stores its <strong>weights as numbers</strong> — floating-point numbers that take up 16 or 32 bits each. In a 7 billion parameter model:</p>
+<p>Every one of those layers stores its <strong>weights as numbers</strong> — floating-point numbers that take up 16 or 32 bits each. In a 7 billion <a href="../reference/glossary.html#P" class="glossary-link">parameter</a> model:</p>
 
 <ul>
-  <li>At <strong>16-bit</strong> (FP16): 7B × 2 bytes = <strong>14 GB</strong></li>
+  <li>At <strong>16-bit</strong> (<a href="../reference/glossary.html#F" class="glossary-link">FP16</a>): 7B × 2 bytes = <strong>14 GB</strong></li>
   <li>At <strong>4-bit</strong> (Q4): 7B × 0.5 bytes = <strong>3.5 GB</strong></li>
 </ul>
 
-<p>Quantization compresses those weight numbers — from 16 bits down to 8 bits, 4 bits, or even lower. The tradeoff: fewer bits = less memory, but each weight is <em>slightly fuzzier</em>. Some layers care more about precision than others. That's what we'll explore next.</p>
+<p><a href="../reference/glossary.html#Q" class="glossary-link">Quantization</a> compresses those weight numbers — from 16 bits down to 8 bits, 4 bits, or even lower. The tradeoff: fewer bits = less memory, but each weight is <em>slightly fuzzier</em>. Some layers care more about precision than others. That's what we'll explore next.</p>
 
 <div class="callout">
   <div class="callout-title">🔗 What's next?</div>
@@ -145,6 +145,24 @@ Words → [Embedding layer] → [Layer 1] → [Layer 2] → ... → [Layer N] �
 <div class="lesson-footer">
   <p>Lesson 1 of the LLM Internals series. <a href="../mission.html">Mission</a> · <a href="../resources.html">Resources</a></p>
   <p><em>Stuck? Confused? Ask your agent teacher a followup question — that's what I'm here for.</em></p>
+</div>
+
+<div class="terms-footer">
+  <p><strong>📖 Terms in this lesson:</strong>
+    <a href="../reference/glossary.html#T">Tensor</a> ·
+    <a href="../reference/glossary.html#S">Scalar</a> ·
+    <a href="../reference/glossary.html#V">Vector</a> ·
+    <a href="../reference/glossary.html#M">Matrix</a> ·
+    <a href="../reference/glossary.html#L">Layer</a> ·
+    <a href="../reference/glossary.html#W">Weight</a> ·
+    <a href="../reference/glossary.html#B">Bias</a> ·
+    <a href="../reference/glossary.html#E">Embedding Layer</a> ·
+    <a href="../reference/glossary.html#T">Transformer</a> ·
+    <a href="../reference/glossary.html#O">Output Layer</a> ·
+    <a href="../reference/glossary.html#P">Parameter</a> ·
+    <a href="../reference/glossary.html#F">FP16</a> ·
+    <a href="../reference/glossary.html#Q">Quantization</a>
+  </p>
 </div>
 
 <script>

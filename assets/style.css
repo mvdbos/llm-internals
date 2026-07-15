@@ -16,7 +16,32 @@
   --measure: 38rem;
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+/* Glossary links — subtle, non-distracting */
+.glossary-link {
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-decoration-color: var(--muted);
+  color: inherit;
+}
+.glossary-link:hover {
+  text-decoration-style: solid;
+  color: var(--accent);
+}
+
+/* Terms footer in lessons */
+.terms-footer {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.terms-footer a {
+  color: var(--muted);
+}
+.terms-footer a:hover {
+  color: var(--accent);
+}
 
 body {
   font-family: var(--font-sans);

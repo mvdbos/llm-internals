@@ -15,9 +15,9 @@
 
 <table>
   <tr><th>Component</th><th>What you run</th></tr>
-  <tr><td>Inference engine</td><td><strong>oMLX</strong> (Apple MLX-based local inference)</td></tr>
+  <tr><td>Inference engine</td><td><strong><a href="../reference/glossary.html#O" class="glossary-link">oMLX</a></strong> (Apple MLX-based local inference)</td></tr>
   <tr><td>Primary models</td><td>Qwen3.6 variants (27B, 35B)</td></tr>
-  <tr><td>Benchmarks</td><td>Deep-SWE: pier + mini-swe-agent solving real GitHub issues</td></tr>
+  <tr><td>Benchmarks</td><td><strong><a href="../reference/glossary.html#D" class="glossary-link">Deep-SWE</a></strong>: pier + <a href="../reference/glossary.html#M" class="glossary-link">mini-swe-agent</a> solving real GitHub issues</td></tr>
   <tr><td>Model format</td><td>Original bf16 weights, quantized via oMLX's built-in quantization</td></tr>
 </table>
 
@@ -28,19 +28,19 @@
 
 <h2>What your benchmarks show: bf16 vs 8-bit</h2>
 
-<p>You ran the same Deep-SWE tasks (real GitHub issues like fixing drizzle-orm window functions, FastAPI deprecation handling, httpx multipart parsing) through both <code>Qwen3.6-27B-bf16</code> and <code>Qwen3.6-27B-8bit</code>. Here's what happened:</p>
+<p>You ran the same Deep-SWE tasks (real GitHub issues like fixing drizzle-orm window functions, FastAPI deprecation handling, httpx multipart parsing) through both <code>Qwen3.6-27B-<a href="../reference/glossary.html#B" class="glossary-link">bf16</a></code> and <code>Qwen3.6-27B-8bit</code>. Here's what happened:</p>
 
 <table>
   <tr><th>Metric</th><th>bf16</th><th>8-bit</th><th>Delta</th></tr>
   <tr><td>Avg steps per task</td><td>74</td><td>116</td><td><strong>+57%</strong></td></tr>
-  <tr><td>Thought duplication</td><td>None (ratio = 1.0)</td><td>Systematic (ratio &lt; 1.0)</td><td>Qualitative cliff</td></tr>
+  <tr><td><a href="../reference/glossary.html#T" class="glossary-link">Thought duplication</a></td><td>None (ratio = 1.0)</td><td>Systematic (ratio &lt; 1.0)</td><td>Qualitative cliff</td></tr>
   <tr><td>Peak context tokens</td><td>~77k-105k</td><td>Similar range</td><td>No difference</td></tr>
 </table>
 
 <p>The step increase isn't because 8-bit is "slower per step" — it's because the model <strong>repeats itself</strong>. It tries something, forgets what it did, and tries again. Or it gets stuck in a loop of similar-looking reasoning. Each duplicate thought burns steps without progress.</p>
 
 <div class="callout">
-  <div class="callout-title">🔍 What's actually happening inside: the KV cache snowball</div>
+  <div class="callout-title">🔍 What's actually happening inside: the <a href="../reference/glossary.html#K" class="glossary-link">KV cache</a> snowball</div>
   <p>To understand why quantization causes loops in long agentic runs, you need to follow one chain of events:</p>
   <ol>
     <li><strong>Step 1:</strong> The model processes token 1 using quantized attention weights. The result is <em>slightly</em> off — maybe the computed attention score between two tokens is 0.73 instead of the true 0.78.</li>
@@ -52,7 +52,7 @@
   <p>This is also why short conversations (5-10 turns) show almost no quality difference between Q8 and bf16 — the compounding hasn't had time to accumulate. The degradation only becomes visible when you push into long-horizon reasoning.</p>
 </div>
 
-<h2>Why thinking budget doesn't fix it</h2>
+<h2>Why <a href="../reference/glossary.html#T" class="glossary-link">thinking budget</a> doesn't fix it</h2>
 
 <p>You tested this hypothesis: maybe the 8-bit model just needs more thinking tokens? The answer was no. Increasing the thinking budget on the 8-bit model didn't help — it just produced <em>more</em> duplicated thoughts. The model wasn't running out of space to think; it was producing lower-quality thoughts to begin with.</p>
 
@@ -157,6 +157,21 @@ For a new model you want to run:
 <div class="lesson-footer">
   <p><a href="0001-tensors-and-layers.html">Lesson 1</a> · <a href="0002-how-quantization-works.html">Lesson 2</a> · <strong>Lesson 3</strong></p>
   <p><em>Want to benchmark your own models? I can help you set up a systematic comparison. Just ask.</em></p>
+</div>
+
+<div class="terms-footer">
+  <p><strong>📖 Terms in this lesson:</strong>
+    <a href="../reference/glossary.html#O">oMLX</a> ·
+    <a href="../reference/glossary.html#D">Deep-SWE</a> ·
+    <a href="../reference/glossary.html#M">mini-swe-agent</a> ·
+    <a href="../reference/glossary.html#B">bf16</a> ·
+    <a href="../reference/glossary.html#K">KV Cache</a> ·
+    <a href="../reference/glossary.html#T">Thinking Budget</a> ·
+    <a href="../reference/glossary.html#T">Thought Duplication</a> ·
+    <a href="../reference/glossary.html#T">Token</a> ·
+    <a href="../reference/glossary.html#I">Inference</a> ·
+    <a href="../reference/glossary.html#C">Context Window</a>
+  </p>
 </div>
 
 <script>

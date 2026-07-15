@@ -9,7 +9,7 @@
 <body>
 
 <h1>Lesson 2: How Quantization Actually Works</h1>
-<p><em>From 16-bit floats to 4-bit integers — and why the model still works. ~7 minutes.</em></p>
+<p><em>From 16-bit floats to 4-bit integers — and why the model still works. ~10 minutes.</em></p>
 
 <h2>What quantization does</h2>
 
@@ -29,28 +29,77 @@
 
 <h2>The core trick: scale factors</h2>
 
-<p>You can't just round 0.0234 to 0 and -0.891 to -1 and call it done. The trick is: <strong>find the min and max value in a group of weights, then map that range to your available integer buckets.</strong></p>
+<p>You can't just round 0.0234 to 0 and -0.891 to -1 and call it done. That would destroy the weights. Instead, quantization uses a simple formula:</p>
 
-<pre><code>
-Step 1: Look at a group of weights:  [0.02, -0.45, 0.31, -0.88, 0.15, -0.02, 0.67, -0.33]
-Step 2: Find min = -0.88, max = 0.67
-Step 3: Scale: 0→15 maps to -0.88→0.67
+<pre><code>original ≈ scale × quantized_value + zero_point</code></pre>
 
-  Int 0  →  -0.88    (min)
-  Int 4  →  -0.49
-  Int 8  →  -0.10
-  Int 12 →   0.29
-  Int 15 →   0.67    (max)
+<p>Where:</p>
+<ul>
+  <li><strong>quantized_value</strong> = a small integer (0-15 for 4-bit, 0-255 for 8-bit)</li>
+  <li><strong>scale</strong> = a single FP16 number telling you "how much each integer step is worth" (e.g. <code>0.1033</code>)</li>
+  <li><strong>zero_point</strong> = the integer that maps to zero (often the min value, like <code>-0.88</code>)</li>
+</ul>
 
-Step 4: Store the 8 weights as 4-bit ints + one FP16 scale factor
-</code></pre>
+<p><strong>The scale and zero_point are stored in full FP16 precision.</strong> Only the integers are cheap. So if you store 32 weights as 4-bit integers plus one FP16 scale + one FP16 zero_point, you get:</p>
 
-<p>The key insight: <strong>the scale factor is stored in full precision</strong>. So each <em>group</em> of weights shares one high-precision scale and offset, and the individual weights are just cheap integers relative to that scale. This is called <strong>block-wise</strong> or <strong>group-wise quantization</strong>.</p>
+<pre><code>Storage: 32 × 4 bits  +  16 bits  +  16 bits  =  160 bits  =  5.0 bits/weight</code></pre>
+
+<p>That's still 3.2× smaller than the original 16 bits/weight. The overhead from the scale factors shrinks as the block gets bigger — with 128-weight blocks you approach 4.25 bits/weight.</p>
+
+<h3>A concrete example</h3>
+
+<p>Let's walk one weight through the encode-decode cycle:</p>
+
+<pre><code>Original weight: 0.31
+Group range: min = -0.88, max = 0.67
+Total span: 0.67 - (-0.88) = 1.55
+
+Scale = 1.55 / 15 = 0.1033 per level
+Zero_point = -0.88
+
+Encoding: 0.31 mapped to integer
+  int = round((0.31 - (-0.88)) / 0.1033) = round(1.19 / 0.1033) = round(11.5)
+  → stored as int 12
+
+Decoding: int 12 back to float
+  value = 0.1033 × 12 + (-0.88) = 1.240 + (-0.88) = 0.36
+
+Error: 0.36 - 0.31 = 0.05  (off by 5 hundredths)</code></pre>
+
+<p>A single weight is off by 0.05. That might seem like a lot — but the model was trained with billions of weights, each carrying a tiny bit of redundant information. A small per-weight error doesn't catastrophically change the output; it adds a faint haze of noise that slightly degrades the signal. The model is robust to this noise because it learned to be during training (through techniques like dropout and weight decay).</p>
 
 <div class="callout">
   <div class="callout-title">🧠 Why this works</div>
-  <p>Weights within a small group tend to be in a similar range. A single scale factor can represent them all well. The model trained with those weights already "expects" small variations — a little fuzziness per weight doesn't propagate catastrophically. It's like audio compression: you lose some fidelity, but the song is still recognizable because you kept the overall structure (the scale per block).</p>
+  <p>Weights within a small group tend to be in a similar range. A single scale factor can represent them all well without needing one per weight. It's like describing a set of heights in a classroom: you don't need every student's exact height in millimeters — "all between 1.50m and 1.85m, give me 16 buckets" is good enough. The model's knowledge is distributed across many weights, so no single weight being slightly off breaks anything.</p>
 </div>
+
+<h2>Why blocks? Why not one scale per layer?</h2>
+
+<p>You might wonder: if scale factors are the trick, why not use them differently? There are only three options:</p>
+
+<table>
+  <tr><th>Strategy</th><th>Compression</th><th>Accuracy</th><th>Verdict</th></tr>
+  <tr>
+    <td>One scale per weight</td>
+    <td>❌ None — the scale is FP16, so you're back to 16 bits per weight</td>
+    <td>✅ Perfect</td>
+    <td>Pointless</td>
+  </tr>
+  <tr>
+    <td>One scale per layer</td>
+    <td>✅ Maximum — one scale for millions of weights</td>
+    <td>❌ Terrible — the weights in a layer span very different ranges (some are near zero, others are large). One scale can't capture both ends well.</td>
+    <td>Too coarse</td>
+  </tr>
+  <tr>
+    <td>One scale per block (e.g., 32 weights)</td>
+    <td>✅ Good — scale overhead is small relative to the weight savings</td>
+    <td>✅ Good — 32 neighboring weights usually live in a similar range</td>
+    <td><strong>The Goldilocks zone</strong></td>
+  </tr>
+</table>
+
+<p>Block size is a tunable parameter. <code>Q8_0</code> uses blocks of 32. K-quants use a hierarchical "superblock" structure (256 weights split into sub-blocks) to get even finer-grained scaling where it matters. The larger the block, the better the compression but the coarser the mapping — 32 is a pragmatic balance.</p>
 
 <h2>Decoding the GGUF suffixes</h2>
 
@@ -95,7 +144,12 @@ Step 4: Store the 8 weights as 4-bit ints + one FP16 scale factor
 <p>This is why <strong>K-quants</strong> exist — they give more bits to sensitive layers and fewer to FFN layers. A <code>Q4_K_M</code> might use 6-bit for attention, 4-bit for FFN, and 6-bit for embeddings, averaging to ~4.6 bits overall.</p>
 
 <div class="callout">
-  <div class="callout-title">📊 Real-world quality loss estimates</div>
+<div class="callout-title">📖 A quick word on perplexity</div>
+<p><strong>Perplexity</strong> is the standard metric for measuring language model quality. It answers: "how surprised is the model by real text?" Lower is better. A perplexity of 10 means the model is as uncertain as if it were choosing randomly among 10 equally likely options at each word. A perfect model would have perplexity near 1. When we say quantization "adds 0.05 to perplexity," we mean the model became slightly more surprised — equivalent to having half an extra option in its guessing game.</p>
+</div>
+
+<div class="callout">
+<div class="callout-title">📊 Real-world quality loss estimates</div>
   <table>
     <tr><th>Quant</th><th>Perplexity increase</th><th>Reasoning quality</th><th>Best for</th></tr>
     <tr><td>Q8_0</td><td>~0.01-0.02</td><td>Nearly identical</td><td>When you have the RAM and want safety</td></tr>

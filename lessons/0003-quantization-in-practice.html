@@ -39,9 +39,18 @@
 
 <p>The step increase isn't because 8-bit is "slower per step" — it's because the model <strong>repeats itself</strong>. It tries something, forgets what it did, and tries again. Or it gets stuck in a loop of similar-looking reasoning. Each duplicate thought burns steps without progress.</p>
 
-<blockquote>
-  <strong>The root cause:</strong> quantization noise in the attention weights means the model can't reliably track what it already did. In a long agentic loop (100+ steps), small per-step errors in self-attention compound. The model's "working memory" — sustained through the KV cache — gets noisier with each step. bf16 preserves enough precision to maintain coherent chains of thought; 8-bit doesn't.
-</blockquote>
+<div class="callout">
+  <div class="callout-title">🔍 What's actually happening inside: the KV cache snowball</div>
+  <p>To understand why quantization causes loops in long agentic runs, you need to follow one chain of events:</p>
+  <ol>
+    <li><strong>Step 1:</strong> The model processes token 1 using quantized attention weights. The result is <em>slightly</em> off — maybe the computed attention score between two tokens is 0.73 instead of the true 0.78.</li>
+    <li><strong>KV cache stores it:</strong> The slightly-wrong attention Key and Value vectors for token 1 are saved into the KV cache. There's no "correction pass" — whatever the model computed is what gets stored.</li>
+    <li><strong>Step 2:</strong> Now the model processes token 2. It attends not just to token 2's own input, but to the <em>stored</em> Keys and Values from token 1 — which are already slightly degraded. The attention computation for token 2 is now working with fuzzy inputs, so its output is slightly <em>more</em> degraded than token 1's.</li>
+    <li><strong>Steps 3–100:</strong> This compounds. By step 50, the KV cache contains 50 tokens' worth of increasingly noisy representations. The model tries to attend to "what I did 30 steps ago," but that memory is blurry. So it does something similar-but-not-quite-right. Then it corrects. Then it overcorrects. Then it looks like it's looping.</li>
+  </ol>
+  <p>With bf16, the per-step error is small enough that the compound degradation across 100 steps is still manageable. With 8-bit, each step introduces enough error that by step 50 the KV cache is meaningfully degraded — the model can't reliably distinguish "I already tried that approach" from "I considered that approach but haven't tried it." So it tries again. And again.</p>
+  <p>This is also why short conversations (5-10 turns) show almost no quality difference between Q8 and bf16 — the compounding hasn't had time to accumulate. The degradation only becomes visible when you push into long-horizon reasoning.</p>
+</div>
 
 <h2>Why thinking budget doesn't fix it</h2>
 

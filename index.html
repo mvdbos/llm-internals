@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LLM Internals — A Practical Course</title>
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  .hero { margin: 2rem 0 2.5rem; }
+  .hero h1 { font-size: 2.2rem; margin-bottom: 0.3rem; }
+  .hero p { color: var(--muted); font-size: 1.1rem; }
+  .toc { margin: 2rem 0; }
+  .toc-item {
+    display: block;
+    padding: 0.75rem 1rem;
+    margin: 0.5rem 0;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    text-decoration: none;
+    color: inherit;
+    transition: background 0.15s;
+  }
+  .toc-item:hover { background: #f5f5f5; text-decoration: none; }
+  .toc-item .num { color: var(--accent); font-weight: 600; margin-right: 0.5rem; }
+  .toc-item .desc { color: var(--muted); font-size: 0.9rem; margin-top: 0.15rem; }
+  .toc-item.ref { background: #fafafa; }
+  .toc-item.ref:hover { background: #f0f0f0; }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>LLM Internals</h1>
+  <p>A practical course on tensors, layers, and quantization — built for making smarter local model decisions.</p>
+  <p><em>Designed and taught by an AI agent. <a href="MISSION.md">Read the mission →</a></em></p>
+</div>
+
+<h2>Lessons</h2>
+
+<div class="toc">
+  <a href="lessons/0001-tensors-and-layers.html" class="toc-item">
+    <span class="num">1.</span> <strong>Tensors &amp; Layers</strong>
+    <div class="desc">The LEGO bricks of LLMs. What tensors and layers actually are — ELI5. ~5 min.</div>
+  </a>
+  <a href="lessons/0002-how-quantization-works.html" class="toc-item">
+    <span class="num">2.</span> <strong>How Quantization Works</strong>
+    <div class="desc">Block-wise scaling, GGUF suffixes decoded, practical decision framework. ~7 min.</div>
+  </a>
+  <a href="lessons/0003-quantization-in-practice.html" class="toc-item">
+    <span class="num">3.</span> <strong>Quantization in Practice</strong>
+    <div class="desc">Your setup, Deep-SWE benchmarks, bf16 vs 8-bit data, systematic quant selection. ~8 min.</div>
+  </a>
+</div>
+
+<h2>Reference</h2>
+
+<div class="toc">
+  <a href="reference/glossary.html" class="toc-item ref">
+    <strong>📖 Glossary</strong>
+    <div class="desc">A-Z of every term: Attention, bf16, Embedding, K-quant, Perplexity, Tensor, Thought Duplication…</div>
+  </a>
+  <a href="reference/quantization-formats.html" class="toc-item ref">
+    <strong>📊 Quantization Formats</strong>
+    <div class="desc">Cheat sheet: every GGUF format, suffix decoder ring, memory formula, decision matrix.</div>
+  </a>
+  <a href="reference/tensors-and-layers.html" class="toc-item ref">
+    <strong>🧱 Tensors &amp; Layers</strong>
+    <div class="desc">Cheat sheet: tensor shapes, layer types, parameter distribution, memory formula.</div>
+  </a>
+</div>
+
+<h2>Resources</h2>
+
+<p><a href="RESOURCES.md">Curated list</a> of high-trust articles, videos, and communities for deeper learning.</p>
+
+<div class="lesson-footer">
+  <p>Built with Hermes Agent. <a href="https://github.com/mvdbos/llm-internals">Source on GitHub</a></p>
+</div>
+
+</body>
+</html>

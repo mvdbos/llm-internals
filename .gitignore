@@ -1,0 +1,6 @@
+__pycache__/
+*.py[cod]
+
+case-study/private/*
+!case-study/private/README.md
+case-study/raw/

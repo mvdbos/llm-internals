@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Design paired, repeated, controlled evaluations of quantized model artifacts without confusing mechanisms, observations, and hypotheses.">
+<title>Lesson 4: Measuring Quantization Quality</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<nav class="course-nav" aria-label="Lesson navigation"><a href="0003-reading-quantization-formats.html">← Previous: Formats</a><a href="../index.html">Course home</a><a href="0005-choosing-and-validating-a-quant.html">Next: Decision and case study →</a></nav>
+<main>
+<p class="lesson-progress">Lesson 4 of 5 · ~10 min</p>
+<h1>Lesson 4: Measuring Quantization Quality</h1>
+<p>Format labels tell you what changed. They do not tell you whether the change matters for your workload. A useful evaluation compares matched conditions, measures accuracy and efficiency, and keeps explanations separate from observations.</p>
+
+<h2>1. Separate four kinds of statement</h2>
+<div class="table-scroll" role="region" aria-label="Evidence statement types" tabindex="0">
+<p class="scroll-hint">Scroll horizontally to compare statement types.</p>
+<table>
+<caption>Mechanism, implementation detail, observation, and hypothesis require different evidence</caption>
+<thead><tr><th scope="col">Statement type</th><th scope="col">Example</th><th scope="col">Required support</th></tr></thead>
+<tbody>
+<tr><th scope="row">Mechanism</th><td>Restricted codes plus reconstruction metadata introduce approximation error.</td><td>Mathematical derivation or high-trust technical source</td></tr>
+<tr><th scope="row">Implementation detail</th><td>A pinned converter leaves selected tensors at another precision.</td><td>Pinned code, documentation, command, and artifact metadata</td></tr>
+<tr><th scope="row">Empirical observation</th><td>Condition B used less peak memory in this experiment.</td><td>Recorded measurements under a declared protocol</td></tr>
+<tr><th scope="row">Hypothesis</th><td>A particular tensor's error caused a task failure.</td><td>Explicit label plus a new test that could distinguish the explanation</td></tr>
+</tbody>
+</table>
+</div>
+<p>Do not turn temporal order into causation: “the quantized run looped, therefore quantization damaged attention” skips every competing explanation. The looping is an observation; the proposed cause is a hypothesis.</p>
+
+<h2>2. Define the decision before collecting data</h2>
+<p>Write one sentence: “Choose among candidate artifacts for <em>this workload</em> subject to <em>this memory boundary</em>, while optimizing <em>these quality and speed outcomes</em>.” That sentence determines the tasks, metrics, and measurement boundary.</p>
+<p>Start from a pinned <a href="../reference/glossary.html#checkpoint" class="glossary-link">checkpoint</a>. If two conditions differ in source model, tokenizer, agent prompt, tools, or environment, the comparison is not an isolated precision test.</p>
+
+<h2>3. Build matched conditions</h2>
+<div class="table-scroll" role="region" aria-label="Controlled variables" tabindex="0">
+<p class="scroll-hint">Scroll horizontally to inspect all controls.</p>
+<table>
+<caption>Hold these fields fixed unless the experiment explicitly studies them</caption>
+<thead><tr><th scope="col">Field</th><th scope="col">Control</th><th scope="col">Failure if uncontrolled</th></tr></thead>
+<tbody>
+<tr><th scope="row">Model identity</th><td>Same source revision, tokenizer, architecture, and generation configuration</td><td>Checkpoint capability is confounded with quantization</td></tr>
+<tr><th scope="row">Conversion</th><td>Record each artifact's exact target, mode, grouping, recipe, and exceptions</td><td>“Precision” conditions may alter different tensors</td></tr>
+<tr><th scope="row">Execution</th><td>Same <a href="../reference/glossary.html#inference-engine" class="glossary-link">inference engine</a>, backend, hardware, and engine settings</td><td>Kernel/runtime differences are mistaken for model differences</td></tr>
+<tr><th scope="row">Agent/harness</th><td>Same version, system/task prompts, tools, step limit, timeout, and environment image</td><td>Scaffolding differences change success and cost</td></tr>
+<tr><th scope="row">Generation</th><td>Same context limit, output/token budget, sampling parameters, stop conditions, and seed policy</td><td>One condition receives more opportunity or different randomness</td></tr>
+<tr><th scope="row">Task</th><td>Same task instance and verifier revision in each pair</td><td>Task difficulty is confounded with the condition</td></tr>
+</tbody>
+</table>
+</div>
+<p>If a setting cannot be matched, preregister it as a limitation. “Default settings” is not enough because defaults can differ across engine versions or model configurations.</p>
+
+<h2>4. Pair tasks and repeat stochastic trials</h2>
+<p>A paired design runs every task under every condition. Pairing controls for task difficulty because the comparison uses within-task differences.</p>
+<pre><code>for each task:
+    for each preregistered repeat:
+        run condition A
+        run condition B
+        retain both results, including failures</code></pre>
+<p>Randomize or alternate condition order when warm-up, thermal state, cache state, or time trends could matter. Run one warm-up policy consistently. Never run memory-heavy conditions in parallel when parallelism changes memory pressure or causes interference.</p>
+<p>Repeat counts should be chosen before results are visible. Multiple repeats estimate stochastic variation; they do not turn a small, convenience-selected task set into a universal benchmark.</p>
+
+<h2>5. Preregister missing-data and exclusion rules</h2>
+<p>Failures are data. Before execution, define:</p>
+<ul>
+<li>what counts as timeout, infrastructure failure, invalid patch/output, or verifier failure;</li>
+<li>whether and when an infrastructure failure is rerun;</li>
+<li>how a missing pair affects paired summaries;</li>
+<li>which runs are excluded from latency or token summaries and why;</li>
+<li>how partial task completion is scored;</li>
+<li>which task/repeat IDs must exist before publication.</li>
+</ul>
+<div class="callout"><div class="callout-title">No post-hoc cleanup</div><p>Do not remove a slow, failed, or looping run because it “looks abnormal.” Apply the preregistered rule and publish counts of included, excluded, missing, and failed runs.</p></div>
+
+<h2>6. Measure accuracy, efficiency, and behavior separately</h2>
+<div class="table-scroll" role="region" aria-label="Evaluation metrics" tabindex="0">
+<p class="scroll-hint">Scroll horizontally to compare metric roles.</p>
+<table>
+<caption>Metric families answer different decision questions</caption>
+<thead><tr><th scope="col">Family</th><th scope="col">Possible measures</th><th scope="col">Interpretation guardrail</th></tr></thead>
+<tbody>
+<tr><th scope="row">Task accuracy</th><td>External verifier pass/fail, rubric score, exact match, task-specific tests</td><td>Primary when it directly reflects the intended workload</td></tr>
+<tr><th scope="row">Predictive diagnostics</th><td>Loss or <a href="../reference/glossary.html#perplexity" class="glossary-link">perplexity</a> on a named dataset</td><td>Useful diagnostic; not a substitute for every downstream behavior</td></tr>
+<tr><th scope="row">Efficiency</th><td>Artifact bytes, loaded/peak memory, prefill/decode latency, tokens, steps, wall time</td><td>State the process/device boundary and include failed runs appropriately</td></tr>
+<tr><th scope="row">Behavior diagnostics</th><td>Tool errors, retries, repetition under a preregistered detector, termination reason</td><td>Secondary unless validated; do not infer mechanism from a label</td></tr>
+</tbody>
+</table>
+</div>
+<p>Report counts and denominators. For paired binary outcomes, show how often A-only passes, B-only passes, both pass, and neither passes. For continuous metrics, report per-pair deltas and distribution/uncertainty, not only two pooled averages.</p>
+
+<h2>7. Analyze without overstating</h2>
+<ol>
+<li>Validate that every expected task × repeat × condition cell exists.</li>
+<li>Confirm parity fields and provenance before viewing outcomes.</li>
+<li>Compute paired task-quality results first.</li>
+<li>Compute efficiency and behavior diagnostics with preregistered inclusion rules.</li>
+<li>Report uncertainty and sensitivity to missing/excluded data.</li>
+<li>Label causal explanations as hypotheses unless a follow-up experiment isolates them.</li>
+</ol>
+<p>One controlled matrix can support a decision for its checkpoint, artifacts, engine/backend, hardware, tasks, and settings. It cannot establish a universal quantization ranking.</p>
+
+<h2>8. Connect the experiment to the decision procedure</h2>
+<p>This lesson implements step 4: <strong>evaluate the exact workload</strong>. The output should be a table of supported candidates with measured quality, latency, and memory—not a slogan. Lesson 5 uses those results to choose a <a href="../reference/glossary.html#pareto-point" class="glossary-link">Pareto point</a> and state uncertainty.</p>
+
+<h2>Quiz: protect the comparison</h2>
+<fieldset class="quiz-question" data-quiz data-retry="true" id="quiz1">
+<legend>1. Why run every task under every condition?</legend>
+<button type="button" class="quiz-option" data-correct="true" data-explanation="Within-task differences remove task difficulty from the condition contrast and preserve a direct paired comparison.">Pairing compares conditions within the same task difficulty.</button>
+<button type="button" class="quiz-option" data-correct="false" data-explanation="Pairing does not make the model deterministic; repeated runs may still vary.">Pairing guarantees identical generated outputs on every repeat.</button>
+<button type="button" class="quiz-option" data-correct="false" data-explanation="A paired design improves attribution within the measured set but does not make a small task sample universally representative.">Pairing makes any number of tasks representative of every workload.</button>
+<p class="quiz-feedback" role="status" tabindex="-1"></p><button type="button" class="quiz-reset" hidden>Try again</button>
+</fieldset>
+
+<fieldset class="quiz-question" data-quiz data-retry="true" id="quiz2">
+<legend>2. A quantized run repeats a tool call. What can you claim immediately?</legend>
+<button type="button" class="quiz-option" data-correct="false" data-explanation="The observation does not identify which internal operation caused it; attention damage is only one untested hypothesis.">Quantization damaged attention and directly caused the repeat.</button>
+<button type="button" class="quiz-option" data-correct="true" data-explanation="The repeated action is observable under the run; causal attribution requires controlled follow-up evidence.">A repetition occurred; its cause remains an explicit hypothesis.</button>
+<button type="button" class="quiz-option" data-correct="false" data-explanation="One behavior event does not establish the condition's aggregate task accuracy.">The quantized condition has lower accuracy on every task.</button>
+<p class="quiz-feedback" role="status" tabindex="-1"></p><button type="button" class="quiz-reset" hidden>Try again</button>
+</fieldset>
+
+<fieldset class="quiz-question" data-quiz data-retry="true" id="quiz3">
+<legend>3. When should missing-data rules be chosen?</legend>
+<button type="button" class="quiz-option" data-correct="false" data-explanation="Choosing rules after results are visible allows the observed direction to influence inclusion.">After examining outcomes, so unusual failures can be removed.</button>
+<button type="button" class="quiz-option" data-correct="false" data-explanation="Silent dropping hides denominators and can bias both quality and efficiency summaries.">During analysis, without reporting which runs were dropped.</button>
+<button type="button" class="quiz-option" data-correct="true" data-explanation="Preregistration makes rerun, exclusion, and missing-pair handling independent of the result direction.">Before execution, with explicit rerun and exclusion criteria.</button>
+<p class="quiz-feedback" role="status" tabindex="-1"></p><button type="button" class="quiz-reset" hidden>Try again</button>
+</fieldset>
+
+<h2>References and next step</h2>
+<ul>
+<li><a href="../resources.html#canonical">High-trust quantization evaluation studies</a></li>
+<li><a href="../reference/quantization-decision-checklist.html">Five-step decision checklist</a></li>
+<li><a href="0005-choosing-and-validating-a-quant.html">Lesson 5: Choosing and Validating a Quant</a></li>
+</ul>
+<div class="terms-footer"><p><strong>Terms in this lesson:</strong> <a href="../reference/glossary.html#checkpoint">Checkpoint</a> · <a href="../reference/glossary.html#inference-engine">Inference engine</a> · <a href="../reference/glossary.html#perplexity">Perplexity</a> · <a href="../reference/glossary.html#pareto-point">Pareto point</a></p></div>
+</main>
+<nav class="course-nav" aria-label="Lesson navigation"><a href="0003-reading-quantization-formats.html">← Previous: Formats</a><a href="../index.html">Course home</a><a href="0005-choosing-and-validating-a-quant.html">Next: Decision and case study →</a></nav>
+<script src="../assets/quiz.js" defer></script>
+</body>
+</html>

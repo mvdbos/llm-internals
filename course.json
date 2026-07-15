@@ -1,0 +1,38 @@
+{
+  "title": "LLM Internals for Quantization Decisions",
+  "lessons": [
+    {
+      "number": 1,
+      "path": "lessons/0001-tensors-and-layers.html",
+      "title": "Tensors & Layers",
+      "minutes": 5
+    },
+    {
+      "number": 2,
+      "path": "lessons/0002-how-quantization-works.html",
+      "title": "How Quantization Actually Works",
+      "minutes": 7
+    },
+    {
+      "number": 3,
+      "path": "lessons/0003-reading-quantization-formats.html",
+      "title": "Reading Quantization Formats",
+      "minutes": 10,
+      "status": "planned"
+    },
+    {
+      "number": 4,
+      "path": "lessons/0004-measuring-quantization-quality.html",
+      "title": "Measuring Quantization Quality",
+      "minutes": 10,
+      "status": "planned"
+    },
+    {
+      "number": 5,
+      "path": "lessons/0005-choosing-and-validating-a-quant.html",
+      "title": "Choosing and Validating a Quant",
+      "minutes": 12,
+      "status": "planned"
+    }
+  ]
+}

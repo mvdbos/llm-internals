@@ -3,88 +3,118 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Reference: Quantization Formats</title>
+<meta name="description" content="Backend-aware reference for GGUF/GGML encodings, MLX affine quantization, oMLX oQ recipes, effective bpw, and runtime support.">
+<title>Reference: Quantization Artifacts, Encodings, and Runtimes</title>
 <link rel="stylesheet" href="../assets/style.css">
 </head>
 <body>
+<nav class="course-nav" aria-label="Breadcrumb"><a href="../index.html">← Course home</a><a href="glossary.html">Glossary</a></nav>
+<main>
+<h1>Reference: quantization artifacts, encodings, and runtimes</h1>
+<p>A label such as “8-bit” is not enough to compare two artifacts. Identify the container, tensor encoding, quantized target, grouping, recipe, engine/backend version, and kernel support.</p>
 
-<h1>Reference: Quantization Formats</h1>
-<p><em>Cheat sheet for GGUF quant types. Print-friendly.</em></p>
-
-<h2>Format reference card</h2>
-
+<h2>Keep the layers of the stack separate</h2>
+<div class="table-scroll" role="region" aria-label="Quantization ecosystem layers" tabindex="0">
+<p class="scroll-hint">Scroll horizontally to inspect every layer.</p>
 <table>
-  <tr><th>Format</th><th>Bits</th><th>7B size</th><th>13B size</th><th>Quality vs FP16</th></tr>
-  <tr><td><code>F16</code></td><td>16.0</td><td>14.0 GB</td><td>26.0 GB</td><td>100% — baseline</td></tr>
-  <tr><td><code>Q8_0</code></td><td>8.0</td><td>7.0 GB</td><td>13.0 GB</td><td>~99% — near-lossless</td></tr>
-  <tr><td><code>Q6_K</code></td><td>6.0</td><td>5.3 GB</td><td>9.8 GB</td><td>~98% — excellent</td></tr>
-  <tr><td><code>Q5_K_M</code></td><td>5.0</td><td>4.5 GB</td><td>8.2 GB</td><td>~97% — very good</td></tr>
-  <tr><td><code>Q5_K_S</code></td><td>5.0</td><td>4.3 GB</td><td>7.9 GB</td><td>~96% — good</td></tr>
-  <tr><td><code>Q4_K_M</code></td><td>4.0</td><td>3.8 GB</td><td>7.0 GB</td><td>~95% — community sweet spot</td></tr>
-  <tr><td><code>Q4_K_S</code></td><td>4.0</td><td>3.6 GB</td><td>6.6 GB</td><td>~93% — OK for simple use</td></tr>
-  <tr><td><code>IQ4_XS</code></td><td>4.0</td><td>3.5 GB</td><td>6.5 GB</td><td>~94% — often beats Q4_K_M</td></tr>
-  <tr><td><code>Q3_K_M</code></td><td>3.0</td><td>3.1 GB</td><td>5.7 GB</td><td>~88% — reasoning degrades</td></tr>
-  <tr><td><code>IQ3_XXS</code></td><td>~3.0</td><td>2.9 GB</td><td>5.4 GB</td><td>~85% — significant loss</td></tr>
-  <tr><td><code>Q2_K</code></td><td>2.0</td><td>2.5 GB</td><td>4.5 GB</td><td>~75% — avoid for reasoning</td></tr>
+<caption>Artifact, encoding, recipe, engine, backend, and hardware are different choices</caption>
+<thead><tr><th scope="col">Layer</th><th scope="col">Question it answers</th><th scope="col">Examples</th></tr></thead>
+<tbody>
+<tr><th scope="row">Checkpoint</th><td>Which learned model state did conversion start from?</td><td>A pinned upstream snapshot and tokenizer revision</td></tr>
+<tr><th scope="row">Artifact/container</th><td>How are tensors and metadata packaged?</td><td>GGUF file; MLX model directory</td></tr>
+<tr><th scope="row">Tensor encoding</th><td>How are selected values represented?</td><td>GGML <code>Q8_0</code>; MLX affine 8-bit/group 64; MXFP8</td></tr>
+<tr><th scope="row">Model-file recipe</th><td>Which encoding is assigned to each tensor?</td><td>A llama.cpp <code>Q4_K_M</code> recipe; an oQ sensitivity-driven mix</td></tr>
+<tr><th scope="row">Quantized target</th><td>Which values changed precision?</td><td>Weights only; selected weights; activations; retained cache</td></tr>
+<tr><th scope="row">Inference engine/backend</th><td>What loads and executes the artifact?</td><td>A pinned llama.cpp build; a pinned MLX/oMLX build</td></tr>
+<tr><th scope="row">Kernel/hardware</th><td>Which implementation runs each operation on which device?</td><td>Native packed multiply kernel; dequantize-then-multiply fallback</td></tr>
+</tbody>
 </table>
+</div>
+<div class="callout"><div class="callout-title">GGUF is not a runtime</div><p><strong>GGUF</strong> means <strong>GGML Universal File</strong>. It is a model-artifact format with metadata and typed tensors. llama.cpp is one engine ecosystem that reads GGUF. Do not call an MLX artifact “GGUF,” and do not reuse a GGML tensor label for a different MLX encoding.</p></div>
 
-<h2>Quick decision matrix</h2>
+<h2>Nominal code width is not effective bits per weight</h2>
+<p>A low-bit code stores the per-value symbol. Real encodings also store block/group metadata and can leave selected tensors at other precisions.</p>
+<pre><code>raw_block_bpw = 8 × bytes_in_one_encoded_block ÷ values_in_block
 
+model_effective_bpw = 8 × counted_model_tensor_bytes ÷ declared_parameter_count</code></pre>
+<ul>
+<li><strong>Raw-block bpw</strong> includes the packed values and metadata in one block structure.</li>
+<li><strong>Model-level effective bpw</strong> additionally reflects the recipe's tensor mixture and unquantized exceptions under a declared accounting rule.</li>
+<li><strong>Artifact bytes</strong> can add headers, metadata, alignment, tokenizer files, and other packaging.</li>
+<li><strong>Runtime memory</strong> can differ again because an engine may map, unpack, align, or duplicate tensors.</li>
+</ul>
+
+<h3>Pinned GGML/GGUF example</h3>
+<p><strong>Implementation detail:</strong> the following values are from the llama.cpp quantize README at commit <code>3b53219361a61b53e7741c479b81b755ec6096b1</code> for <code>meta-llama/Llama-3.1-8B</code>. They are not universal constants or quality rankings.</p>
+<div class="table-scroll" role="region" aria-label="Pinned effective bits per weight example" tabindex="0">
+<p class="scroll-hint">Scroll horizontally to compare code width and effective storage.</p>
 <table>
-  <tr><th>Your priority</th><th>Recommended format</th></tr>
-  <tr><td>Maximum quality (I have RAM)</td><td><code>Q8_0</code> or <code>F16</code></td></tr>
-  <tr><td>Best quality/size tradeoff</td><td><code>Q4_K_M</code></td></tr>
-  <tr><td>Quality for reasoning/agentic tasks</td><td><code>Q6_K</code> minimum, <code>Q8_0</code> preferred</td></tr>
-  <tr><td>Quality for creative writing</td><td><code>Q4_K_M</code> usually fine</td></tr>
-  <tr><td>Smallest file that still works</td><td><code>IQ4_XS</code> or <code>Q3_K_M</code></td></tr>
-  <tr><td>Smallest possible (emergency)</td><td><code>IQ2_XXS</code> — but expect quality cliffs</td></tr>
+<caption>Model-level effective bpw for one model and pinned llama.cpp revision</caption>
+<thead><tr><th scope="col">llama.cpp output label</th><th scope="col">Kind</th><th scope="col">Effective bpw in pinned table</th><th scope="col">Interpretation</th></tr></thead>
+<tbody>
+<tr><th scope="row"><code>Q8_0</code></th><td>GGML tensor encoding used across eligible tensors</td><td>8.5008</td><td>Eight-bit codes plus per-block metadata and model-level exceptions</td></tr>
+<tr><th scope="row"><code>Q6_K</code></th><td>K-block tensor encoding</td><td>6.5633</td><td>Six-bit payload with K-block metadata and model-level accounting</td></tr>
+<tr><th scope="row"><code>Q4_K_M</code></th><td>Model-file mixture recipe</td><td>4.8944</td><td>Not one uniform four-bit tensor encoding; selected tensors use recipe-dependent types</td></tr>
+<tr><th scope="row"><code>IQ4_XS</code></th><td>Importance-aware GGML tensor encoding/recipe</td><td>4.4597</td><td>Specialized codebook/metadata; quality depends on model and evaluation</td></tr>
+</tbody>
 </table>
+</div>
+<p>Source and raw block-structure links: <a href="../resources.html#canonical">canonical evidence ledger</a>.</p>
 
-<h2>Suffix decoder ring</h2>
-
-<pre><code>
-[Q|IQ][bits]_[K?][S|M|L|XS|XXS]
-
-Q   = traditional linear quantization (evenly spaced buckets)
-IQ  = importance-weighted (more precision for important weights)
-K   = per-layer-type block sizes (K-quant superblock)
-S   = small variant (fewer weights at higher precision)
-M   = medium variant (the default sweet spot)
-L   = large variant (more weights at higher precision)
-XS  = extra-small (IQ only, more aggressive)
-XXS = extra-extra-small (IQ only, most aggressive)
-_0  = legacy format with fixed block size 32 (no K-quant)
-</code></pre>
-
-<h2>Memory formula (approximate)</h2>
-
-<pre><code>
-model_size_GB ≈ (num_params × bits_per_weight / 8) + overhead
-
-Where:
-  num_params is in billions
-  bits_per_weight is the effective average (e.g., Q4_K_M ≈ 4.6)
-  overhead ≈ 0.3-0.5 GB for small models, 0.5-2 GB for large models
-
-Example: Qwen3.6-35B at Q4_K_M
-  ≈ (35 × 4.6 / 8) + 1.0
-  ≈ 20.1 + 1.0
-  ≈ 21 GB
-</code></pre>
-
-<h2>Your benchmarks (Deep-SWE context)</h2>
-
+<h2>Three concrete eight-bit examples that are not synonyms</h2>
+<div class="table-scroll" role="region" aria-label="Distinct eight-bit encodings" tabindex="0">
+<p class="scroll-hint">Scroll horizontally to compare the three encodings.</p>
 <table>
-  <tr><th>Quant</th><th>Observed behavior</th></tr>
-  <tr><td><code>bf16</code> (FP16)</td><td>Clean thought patterns. No duplication. Best agentic performance.</td></tr>
-  <tr><td><code>8-bit</code> (Q8_0)</td><td>Systematic thought duplication. Reasoning quality degraded measurably.</td></tr>
+<caption>Same broad bit-width category, different artifact and encoding semantics</caption>
+<thead><tr><th scope="col">Name</th><th scope="col">Artifact/ecosystem</th><th scope="col">Grouping and metadata</th><th scope="col">What the name does not imply</th></tr></thead>
+<tbody>
+<tr><th scope="row"><code>Q8_0</code></th><td>GGML tensor type commonly stored in GGUF</td><td>Blocks of 32 values; one FP16 scale plus 32 signed 8-bit quants in the pinned GGML structure</td><td>Not MLX affine 8-bit and not current oQ8</td></tr>
+<tr><th scope="row">MLX affine 8-bit/group 64</th><td>MLX artifact metadata/API</td><td>Affine mode with 64-value groups, packed weights, scales, and biases</td><td>Not <code>Q8_0</code>; not an oQ quality level; not activation or cache quantization by default</td></tr>
+<tr><th scope="row">Current oMLX oQ8</th><td>oMLX oQ recipe at commit <code>5a39ba3…</code></td><td>Current documentation specifies MXFP8 with group size 32</td><td>Not the historical/private affine 8-bit/group-64 condition and not GGML <code>Q8_0</code></td></tr>
+</tbody>
 </table>
+</div>
+<p><strong>Version warning:</strong> oQ names describe a versioned recipe. Inspect the artifact metadata and pinned oMLX documentation rather than inferring the underlying encoding from “oQ8.”</p>
 
-<p><em>This matches the general pattern: for agentic/reasoning tasks, precision matters more than for creative or conversational use. The model can't compensate for fuzzy weights when it needs to follow a long chain of logic.</em></p>
+<h2>Model-level mixture recipes</h2>
+<p>A recipe can inspect tensor name/category, architecture, layer position, expert/GQA properties, importance data, and fallback support before assigning an encoding. Therefore:</p>
+<ul>
+<li>Do not translate <code>_M</code> into a universal rule such as “attention uses 6-bit and FFN uses 4-bit.”</li>
+<li>Do not assume two files with the same recipe label have identical effective bpw across architectures.</li>
+<li>Record the quantizer revision, command/parameters, calibration or importance data, source checkpoint, and resulting per-tensor metadata.</li>
+<li>Treat model-card shorthand as a pointer to inspect, not complete provenance.</li>
+</ul>
+<p>The pinned llama.cpp selection logic is linked in the <a href="../resources.html#canonical">evidence ledger</a>.</p>
 
-<div class="lesson-footer">
-  <p><a href="../lessons/0002-how-quantization-works.html">← Back to Lesson 2</a> · <a href="glossary.html">Glossary</a> · <a href="../mission.html">Mission</a></p>
+<h2>Runtime support is part of the format decision</h2>
+<div class="table-scroll" role="region" aria-label="Runtime support checklist" tabindex="0">
+<p class="scroll-hint">Scroll horizontally to inspect the full checklist.</p>
+<table>
+<caption>Questions to answer for each artifact × engine × backend × hardware combination</caption>
+<thead><tr><th scope="col">Check</th><th scope="col">Evidence to collect</th><th scope="col">Why it changes the decision</th></tr></thead>
+<tbody>
+<tr><th scope="row">Loader support</th><td>Pinned engine can parse every tensor type and required metadata</td><td>An artifact that cannot load is not a candidate</td></tr>
+<tr><th scope="row">Native kernels</th><td>Operation/tensor combination uses an optimized kernel on the target device</td><td>Compact storage does not guarantee fast execution</td></tr>
+<tr><th scope="row">Fallback behavior</th><td>Whether weights are unpacked/dequantized, copied, or executed on another device</td><td>Fallbacks can increase memory and latency</td></tr>
+<tr><th scope="row">Quantized target</th><td>Weights, activations, cache, embeddings/output, and exceptions listed separately</td><td>Two “8-bit” runs may alter different values</td></tr>
+<tr><th scope="row">Measured memory</th><td>Artifact bytes, loaded tensors, and peak runtime allocation reported separately</td><td>File size alone does not establish fit</td></tr>
+<tr><th scope="row">Measured speed</th><td>Prefill and decode throughput/latency under a controlled workload</td><td>Kernel and bandwidth effects differ by phase</td></tr>
+<tr><th scope="row">Measured quality</th><td>Paired task results on the exact checkpoint and workload</td><td>No suffix provides a universal quality percentage</td></tr>
+</tbody>
+</table>
 </div>
 
+<h2>Record this comparison tuple</h2>
+<pre><code>source checkpoint revision
+→ artifact/container + revision
+→ quantized targets
+→ mode + code width + group/block size
+→ calibration/importance recipe + exceptions
+→ engine + backend + version
+→ kernels + hardware
+→ measured memory, speed, and paired task quality</code></pre>
+<p>Only compare candidates after every field is known or explicitly marked unknown. Choose among measured Pareto points rather than relying on a format ranking or universal default.</p>
+</main>
+<nav class="course-nav" aria-label="Footer"><a href="../index.html">← Course home</a><a href="glossary.html">Glossary</a></nav>
 </body>
 </html>

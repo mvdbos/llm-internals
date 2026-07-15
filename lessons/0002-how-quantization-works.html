@@ -14,7 +14,8 @@
 <h1>Lesson 2: How Quantization Actually Works</h1>
 <p>Quantization is not “make every number less accurate.” It is a specified round trip: map selected real-valued numbers to a restricted set of codes, store those codes plus reconstruction metadata, then reconstruct or compute with approximations during inference.</p>
 
-<h2>1. State the target before the bit width</h2>
+<h2>1. Start with the numeric format and target</h2>
+<p><a href="../reference/glossary.html#fp16" class="glossary-link">FP16</a> and <a href="../reference/glossary.html#bf16" class="glossary-link">bf16</a> both use 16 stored bits, but they are floating-point formats—not 65,536 linearly spaced values across one range. Their sign, exponent, and significand fields make representable values dense near zero and farther apart at larger magnitudes. FP16 allocates more significand bits and fewer exponent bits; bf16 allocates fewer significand bits and more exponent bits, so they trade local precision and numeric range differently.</p>
 <p><a href="../reference/glossary.html#quantization" class="glossary-link">Quantization</a> can change weights, activations, retained state, or another tensor. The <a href="../reference/glossary.html#quantized-target" class="glossary-link">quantized target</a> matters because each role has different values, lifetimes, and error paths. A weight-only conversion does not automatically quantize temporary activations or retained state.</p>
 <p>For every comparison, record:</p>
 <ul>
@@ -37,8 +38,8 @@
 <p>A <a href="../reference/glossary.html#scale-factor" class="glossary-link">scale factor</a> sets the spacing between representable levels in many mappings. An affine mapping also uses an offset or zero point. Codebook-based or floating encodings use different metadata. “Low-bit” describes the codes, not the complete storage or arithmetic.</p>
 
 <h2>3. One complete two-bit affine round trip</h2>
-<p>Consider one group containing four real values:</p>
-<pre><code>original = [-1.00, -0.40, 0.20, 0.90]</code></pre>
+<p>Consider one group containing eight real values:</p>
+<pre><code>original = [-1.00, -0.70, -0.40, -0.10, 0.20, 0.50, 0.70, 0.90]</code></pre>
 <p>Use four codes, <code>0, 1, 2, 3</code>. The minimum is −1.00 and the maximum is 0.90, so the span is 1.90. Three equal intervals cover four levels:</p>
 <pre><code>scale = (maximum - minimum) ÷ (number_of_levels - 1)
       = (0.90 - (-1.00)) ÷ 3
@@ -53,16 +54,20 @@ reconstruct(q) = minimum + q × scale</code></pre>
 <thead><tr><th scope="col">Original value</th><th scope="col">Stored code</th><th scope="col">Reconstructed value</th><th scope="col">Signed error</th><th scope="col">Absolute error</th></tr></thead>
 <tbody>
 <tr><th scope="row">−1.00</th><td>0</td><td>−1.0000</td><td>0.0000</td><td>0.0000</td></tr>
+<tr><th scope="row">−0.70</th><td>0</td><td>−1.0000</td><td>−0.3000</td><td>0.3000</td></tr>
 <tr><th scope="row">−0.40</th><td>1</td><td>−0.3667</td><td>+0.0333</td><td>0.0333</td></tr>
+<tr><th scope="row">−0.10</th><td>1</td><td>−0.3667</td><td>−0.2667</td><td>0.2667</td></tr>
 <tr><th scope="row">0.20</th><td>2</td><td>0.2667</td><td>+0.0667</td><td>0.0667</td></tr>
+<tr><th scope="row">0.50</th><td>2</td><td>0.2667</td><td>−0.2333</td><td>0.2333</td></tr>
+<tr><th scope="row">0.70</th><td>3</td><td>0.9000</td><td>+0.2000</td><td>0.2000</td></tr>
 <tr><th scope="row">0.90</th><td>3</td><td>0.9000</td><td>0.0000</td><td>0.0000</td></tr>
 </tbody>
 </table>
 </div>
-<p>The round trip has mean absolute error <code>0.0250</code> and mean squared error approximately <code>0.001389</code> for these four values. Those numbers describe this group only; they do not tell us whether a full model's outputs remain useful.</p>
+<p>The round trip has mean absolute error <code>0.1375</code> and mean squared error approximately <code>0.032639</code> for these eight values. Those numbers describe this group only; they do not tell us whether a full model's outputs remain useful.</p>
 
 <h2>4. Metadata changes the true storage cost</h2>
-<p>Four two-bit codes need eight payload bits. But the group also needs enough metadata to reconstruct the values. For many groups:</p>
+<p>Eight two-bit codes need sixteen payload bits. But the group also needs enough metadata to reconstruct the values. For many groups:</p>
 <pre><code>total storage
 = value_code_bits
 + scale/offset/codebook metadata
@@ -86,9 +91,22 @@ reconstruct(q) = minimum + q × scale</code></pre>
 </tbody>
 </table>
 </div>
+<h3>Symmetric parameterization</h3>
+<p>A symmetric linear mapping centers levels around zero and normally has no separate offset:</p>
+<pre><code>scale = max(|x|) ÷ q_max
+q     = clip(round(x ÷ scale), −q_max, q_max)
+x_hat = scale × q</code></pre>
+<p>Zero reconstructs exactly, while an asymmetric group may leave part of the code range poorly used.</p>
+<h3>Affine parameterization</h3>
+<p>An affine mapping shifts the grid with a zero point <code>z</code> (or an algebraically equivalent offset):</p>
+<pre><code>q     = clip(round(x ÷ scale) + z, q_min, q_max)
+x_hat = scale × (q − z)</code></pre>
+<p>The scale controls spacing; the zero point controls alignment. They are distinct parameters. The toy calculation above writes the same idea using the group's minimum as an explicit reconstruction offset.</p>
 
 <h2>6. Measure error at more than one level</h2>
-<p>A low tensor reconstruction error is useful evidence, but it is not the final objective. Error can shrink, amplify, cancel, or redirect as values pass through normalization, nonlinearities, residual paths, routing, and repeated generation steps.</p>
+<p>A low tensor reconstruction error is useful evidence, but it is not the final objective. For a dot product <code>y = Σᵢ(wᵢaᵢ)</code>, replacing each weight with <code>wᵢ + errorᵢ</code> gives:</p>
+<pre><code>y_hat − y = Σᵢ(errorᵢ × activationᵢ)</code></pre>
+<p>Positive and negative terms can partly cancel, which helps explain why nonzero local errors need not produce the same output error. Cancellation is not guaranteed: a large activation can amplify one weight error, aligned errors can add, and outliers or sensitive directions can dominate an average. Later normalization, nonlinearities, residual paths, routing, and repeated generation can shrink, amplify, or redirect the perturbation.</p>
 <div class="table-scroll" role="region" aria-label="Quantization error levels" tabindex="0">
 <p class="scroll-hint">Scroll horizontally to compare evidence levels.</p>
 <table>
@@ -114,7 +132,7 @@ reconstruct(q) = minimum + q × scale</code></pre>
 <li>report uncertainty and scope.</li>
 </ol>
 
-<div class="callout"><div class="callout-title">The same mechanics, different implementations</div><p>Artifact families and inference engines give these categories versioned names and support different encodings and kernels. <a href="0003-reading-quantization-formats.html">Lesson 3</a> teaches how to read those implementation-specific labels without conflating them.</p></div>
+<div class="callout"><div class="callout-title">The same mechanics, different implementations</div><p>GGUF is an artifact/container family, llama.cpp <code>Q8_0</code> and MLX affine 8-bit name different quantization schemes, MLX is a framework/ecosystem, and vLLM and SGLang are inference runtimes. These category labels do not define one interchangeable “8-bit” format. <a href="0003-reading-quantization-formats.html">Lesson 3</a> covers the versioned implementation details.</p></div>
 
 <h2>Quiz: reason through the round trip</h2>
 <fieldset class="quiz-question" data-quiz data-retry="true" id="quiz1">
@@ -150,7 +168,7 @@ reconstruct(q) = minimum + q × scale</code></pre>
 <li><a href="../reference/quantization-decision-checklist.html">Five-step decision checklist</a></li>
 <li><a href="0003-reading-quantization-formats.html">Lesson 3: Reading Quantization Formats</a></li>
 </ul>
-<div class="terms-footer"><p><strong>Terms in this lesson:</strong> <a href="../reference/glossary.html#quantization">Quantization</a> · <a href="../reference/glossary.html#quantized-target">Quantized target</a> · <a href="../reference/glossary.html#scale-factor">Scale factor</a> · <a href="../reference/glossary.html#group-size">Group size</a> · <a href="../reference/glossary.html#effective-bits-per-weight">Effective bits per weight</a></p></div>
+<div class="terms-footer"><p><strong>Terms in this lesson:</strong> <a href="../reference/glossary.html#fp16">FP16</a> · <a href="../reference/glossary.html#bf16">bf16</a> · <a href="../reference/glossary.html#quantization">Quantization</a> · <a href="../reference/glossary.html#quantized-target">Quantized target</a> · <a href="../reference/glossary.html#scale-factor">Scale factor</a> · <a href="../reference/glossary.html#group-size">Group size</a> · <a href="../reference/glossary.html#effective-bits-per-weight">Effective bits per weight</a></p></div>
 </main>
 <nav class="course-nav" aria-label="Lesson navigation"><a href="0001-tensors-and-layers.html">← Previous: Runtime state</a><a href="../index.html">Course home</a><a href="0003-reading-quantization-formats.html">Next: Formats and runtimes →</a></nav>
 <script src="../assets/quiz.js" defer></script>

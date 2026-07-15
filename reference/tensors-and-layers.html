@@ -49,6 +49,11 @@
 <li><strong>Repeat.</strong> The new token is fed into the next generation step; architecture-specific retained state is reused or updated.</li>
 </ol>
 
+<h3>Causal attention, with its boundary stated</h3>
+<pre><code>attention(Q, K, V)
+= softmax((QKᵀ ÷ √dₖ) + causal_mask)V</code></pre>
+<p>For one conventional causal-attention operation, learned projections form query (<code>Q</code>), key (<code>K</code>), and value (<code>V</code>) tensors. The scaled query–key products are masked so a position cannot use future positions, normalized with softmax, and used to mix values. Grouped-query attention (GQA) and multi-query attention (MQA) can share fewer key/value heads across more query heads. This equation does not describe recurrent, state-space, or linear-attention state updates, and a real block also includes learned projections, residual paths, normalization, and often a gated FFN.</p>
+
 <h2>Three memory quantities that must not be conflated</h2>
 <div class="table-scroll" role="region" aria-label="Memory accounting boundaries" tabindex="0">
 <p class="scroll-hint">Scroll horizontally to inspect every boundary.</p>
@@ -66,6 +71,14 @@
 <h3>Estimate loaded weight storage</h3>
 <pre><code>estimated_weight_bytes = parameter_count × effective_bits_per_weight ÷ 8</code></pre>
 <p><strong>Use this only as an estimate.</strong> Effective bpw must include encoding metadata and any tensors stored at other precisions under a declared accounting rule. Artifact bytes can additionally contain headers and non-model files. Loaded memory can differ again because an engine may map, unpack, align, or copy tensors.</p>
+
+<h3>Worked weight estimate</h3>
+<p>Suppose a hypothetical 7-billion-parameter artifact has a measured model-level effective storage of 4.5 bits per parameter:</p>
+<pre><code>7,000,000,000 × 4.5 ÷ 8
+= 3,937,500,000 bytes
+= 3.9375 GB (decimal)
+= 3.6671 GiB (binary)</code></pre>
+<p>This is an encoding estimate, not a loaded-memory guarantee. The same artifact may allocate more or less after mapping, alignment, unpacking, or copying.</p>
 
 <h3>Conventional attention KV-cache estimate</h3>
 <pre><code>kv_bytes = batch
@@ -90,6 +103,14 @@
 = 1,073,741,824 bytes
 = 1.00 GiB</code></pre>
 <p>This is the KV allocation under the formula only. It does not include weights, current-step activations, allocator overhead, or engine workspaces.</p>
+
+<h3>Combine the boundaries</h3>
+<p>If the hypothetical 7-billion-parameter artifact above also used the worked 1.00 GiB KV cache, the two estimated components would total:</p>
+<pre><code>3,937,500,000 + 1,073,741,824
+= 5,011,241,824 bytes
+= 5.0112 GB
+= 4.6671 GiB</code></pre>
+<p>This subtotal still excludes current-step activations, workspaces, engine/allocator overhead, and safety headroom. A complete deployment decision therefore measures the real peak instead of presenting 4.6671 GiB as a capacity requirement.</p>
 
 <h2>Architectures that need a different retained-state model</h2>
 <div class="table-scroll" role="region" aria-label="Architecture-specific runtime state" tabindex="0">

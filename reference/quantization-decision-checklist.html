@@ -42,12 +42,20 @@
 <li>Add temporary activations, workspaces, allocator/runtime overhead, and explicit headroom.</li>
 <li>Verify with a peak measurement under the intended batch, prompt length, and generated length.</li>
 </ul>
-<pre><code>peak_runtime_memory
+<pre><code>weight_bytes = parameter_count × effective_bpw ÷ 8
+
+conventional_kv_bytes = batch × retained_tokens × layers
+                      × retained_kv_heads × head_dimension
+                      × 2  # keys and values
+                      × bytes_per_element
+
+peak_runtime_memory
 ≈ loaded_parameters
 + retained_runtime_state
 + activations_and_workspaces
 + runtime_overhead
 + safety_headroom</code></pre>
+<p>Keep bytes explicit during arithmetic. Convert only at the end: <code>GB = bytes ÷ 1,000,000,000</code>; <code>GiB = bytes ÷ 1,073,741,824</code>. The KV formula applies only to conventional cached attention with the stated dimensions.</p>
 <dl class="worksheet"><dt>Artifact bytes</dt><dd></dd><dt>Loaded parameters</dt><dd></dd><dt>Retained state</dt><dd></dd><dt>Measured peak</dt><dd></dd><dt>Headroom</dt><dd></dd></dl>
 </section>
 
@@ -85,6 +93,59 @@
 </ul>
 <dl class="worksheet"><dt>Chosen candidate</dt><dd></dd><dt>Why this Pareto point</dt><dd></dd><dt>Trade-off accepted</dt><dd></dd><dt>Residual uncertainty</dt><dd></dd><dt>Re-evaluate when</dt><dd></dd></dl>
 </section>
+
+<h2>Evidence table template</h2>
+<div class="table-scroll" role="region" aria-label="Blank candidate evidence table" tabindex="0">
+<p class="scroll-hint">Scroll horizontally to inspect every evidence field.</p>
+<table>
+<caption>Fill one row per candidate under the same accounting and workload rules</caption>
+<thead><tr><th scope="col">Candidate alias</th><th scope="col">Exact scheme and target</th><th scope="col">Artifact / loaded / peak memory</th><th scope="col">Primary quality evidence</th><th scope="col">Latency or throughput</th><th scope="col">Uncertainty and exclusions</th></tr></thead>
+<tbody><tr><th scope="row">________</th><td>________</td><td>________</td><td>________</td><td>________</td><td>________</td></tr><tr><th scope="row">________</th><td>________</td><td>________</td><td>________</td><td>________</td><td>________</td></tr></tbody>
+</table>
+</div>
+
+<h2>Paired-evaluation checklist</h2>
+<ul>
+<li>Same checkpoint and architecture revision.</li>
+<li>Same exact task instance in both conditions.</li>
+<li>Same engine/backend, harness, prompts, tools, limits, decoding settings, and verifier.</li>
+<li>Repeated pairs with condition order controlled or alternated.</li>
+<li>F2P/P2P, reward, or another task-valid quality measure analyzed before steps, tokens, latency, or cost.</li>
+<li>Timeouts and model failures retained as outcomes; infrastructure and verifier failures reported separately.</li>
+<li>Every expected pair, missing metric, repair, rerun, and exclusion accounted for.</li>
+</ul>
+
+<h2>Red flags that block a recommendation</h2>
+<ul>
+<li>Unmatched tasks or different repetition counts.</li>
+<li>Mixed checkpoint families or architectures inside a condition mean.</li>
+<li>Discovered artifact or job counts described as completed trials.</li>
+<li>Missing verifier data silently treated as failure, success, or zero.</li>
+<li>A generic bit label used without mode, group/block size, target, and exceptions.</li>
+<li>An undefined “quality percentage” without metric, baseline, dataset, and scope.</li>
+<li>A smaller artifact assumed to be faster without a kernel/runtime measurement.</li>
+</ul>
+
+<h2>Blank decision record</h2>
+<dl class="worksheet"><dt>Decision and date</dt><dd></dd><dt>Checkpoint / tokenizer revision</dt><dd></dd><dt>Engine/backend / hardware</dt><dd></dd><dt>Memory boundary and headroom</dt><dd></dd><dt>Candidates and exact schemes</dt><dd></dd><dt>Paired workload evidence</dt><dd></dd><dt>Chosen Pareto point</dt><dd></dd><dt>Accepted trade-off</dt><dd></dd><dt>Residual uncertainty</dt><dd></dd><dt>Re-evaluation trigger</dt><dd></dd></dl>
+
+<h2>Completed generic example</h2>
+<p><strong>Illustrative values only—not empirical claims.</strong> A fictional 3-billion-parameter conventional-attention model must run inside a measured 4.0 GiB process boundary while retaining at least 0.5 GiB headroom. It uses batch 1, 4,096 retained tokens, 16 layers, 8 KV heads, head dimension 128, and a two-byte KV element.</p>
+<pre><code>candidate A weight estimate: 3,000,000,000 × 5.0 ÷ 8
+                           = 1.8750 GB = 1.7462 GiB
+candidate B weight estimate: 3,000,000,000 × 6.5 ÷ 8
+                           = 2.4375 GB = 2.2701 GiB
+conventional KV estimate:   1 × 4,096 × 16 × 8 × 128 × 2 × 2
+                           = 268,435,456 bytes = 0.2500 GiB</code></pre>
+<div class="table-scroll" role="region" aria-label="Completed generic decision example" tabindex="0">
+<p class="scroll-hint">Scroll horizontally to inspect the completed comparison.</p>
+<table>
+<caption>Fictional paired evidence under one engine, hardware target, and task set</caption>
+<thead><tr><th scope="col">Candidate</th><th scope="col">Measured peak</th><th scope="col">Paired task score</th><th scope="col">Median decode latency</th><th scope="col">Constraint result</th></tr></thead>
+<tbody><tr><th scope="row">A</th><td>3.0 GiB</td><td>0.84</td><td>38 ms/token</td><td>Fits with 1.0 GiB headroom</td></tr><tr><th scope="row">B</th><td>3.7 GiB</td><td>0.86</td><td>35 ms/token</td><td>Fails the 0.5 GiB headroom rule</td></tr></tbody>
+</table>
+</div>
+<p><strong>Decision:</strong> choose candidate A for this deployment. Candidate B has the better fictional quality and latency measurements, but it violates the preregistered headroom constraint. The accepted trade-off is a 0.02 lower task score and 3 ms/token slower decode in exchange for 0.7 GiB more measured headroom. Re-evaluate if the memory boundary, workload score, engine version, or candidate artifacts change.</p>
 
 <h2>Release check</h2>
 <ul>

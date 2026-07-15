@@ -39,6 +39,9 @@
 <tr><th scope="row"><code>IQ4_XS</code></th><td>GGML importance-aware encoding/recipe label</td><td>Uses specialized codebook/metadata and importance-aware quantization procedures</td><td>“The label guarantees better quality for every model and task”</td></tr>
 <tr><th scope="row">MLX affine 8-bit/group 64</th><td>MLX weight-quantization configuration</td><td>Affine mode, eight-bit codes, groups of 64, packed weights, scales, and biases</td><td>“This is GGML Q8_0” or “activations/cache are also eight-bit”</td></tr>
 <tr><th scope="row">Current oMLX oQ8</th><td>Versioned oQ model recipe</td><td>Current pinned documentation specifies MXFP8 with group size 32</td><td>“oQ8 means affine eight-bit/group 64”</td></tr>
+<tr><th scope="row">MLX</th><td>Array framework and model ecosystem</td><td>Provides quantization APIs, model code, and execution primitives; an MLX artifact records its own configuration</td><td>“MLX is one tensor encoding”</td></tr>
+<tr><th scope="row">llama.cpp</th><td>Inference engine/runtime</td><td>Loads supported artifact and tensor types and dispatches version-specific backend kernels</td><td>“llama.cpp is another name for GGUF”</td></tr>
+<tr><th scope="row">vLLM / SGLang</th><td>Inference runtimes/frameworks</td><td>Serve models through their own versioned loaders, quantization paths, schedulers, and kernels</td><td>“Every format supported elsewhere is automatically supported here”</td></tr>
 </tbody>
 </table>
 </div>
@@ -109,6 +112,44 @@
 <button type="button" class="quiz-option" data-correct="false" data-explanation="Successful loading proves basic loader compatibility for this artifact, though not every operation's optimized path.">Whether the loader can parse the artifact at all.</button>
 <button type="button" class="quiz-option" data-correct="true" data-explanation="Native kernels, fallback behavior, peak memory, speed, and workload quality require their own checks.">Whether execution is efficient and task quality is acceptable.</button>
 <button type="button" class="quiz-option" data-correct="false" data-explanation="Artifact bytes are already measured by the premise; they do not prove runtime outcomes.">Whether the artifact uses fewer bytes on disk than the larger file.</button>
+<p class="quiz-feedback" role="status" tabindex="-1"></p><button type="button" class="quiz-reset" hidden>Try again</button>
+</fieldset>
+
+<h2>7. Artifact-inspection exercise</h2>
+<p>These fictional snippets are anonymized. Read fields, not filenames or the word “quantized.”</p>
+<div class="table-scroll" role="region" aria-label="Anonymized artifact configuration snippets" tabindex="0">
+<p class="scroll-hint">Scroll horizontally to compare both snippets.</p>
+<table>
+<caption>Two candidates whose configuration fields describe different category stacks</caption>
+<thead><tr><th scope="col">Candidate A</th><th scope="col">Candidate B</th></tr></thead>
+<tbody><tr><td><pre><code>{
+  "artifact_format": "gguf",
+  "model_file_recipe": "Q4_K_M",
+  "tensor_types": {
+    "Q4_K": 241,
+    "Q6_K": 31,
+    "F32": 65
+  },
+  "engine": "runtime-a",
+  "engine_revision": "rev-a"
+}</code></pre></td><td><pre><code>{
+  "framework": "mlx",
+  "quantization": {
+    "mode": "affine",
+    "bits": 8,
+    "group_size": 64
+  },
+  "quantized_target": "eligible_weights",
+  "engine": "runtime-b",
+  "engine_revision": "rev-b"
+}</code></pre></td></tr></tbody>
+</table>
+</div>
+<fieldset class="quiz-question" data-quiz data-retry="true" id="quiz4">
+<legend>4. Which conclusion follows from the configuration fields?</legend>
+<button type="button" class="quiz-option" data-correct="true" data-explanation="A declares a GGUF model-file mixture recipe and multiple tensor types. B declares MLX affine weight quantization with group size 64. Neither snippet provides quality evidence.">A is a mixed GGUF recipe; B is MLX affine weight-only quantization; quality still requires measurement.</button>
+<button type="button" class="quiz-option" data-correct="false" data-explanation="The snippets name different artifact/framework categories, engines, grouping, targets, and tensor assignments. A shared informal bit label could not erase those fields.">Both implement the same universal low-bit format because both contain integer codes.</button>
+<button type="button" class="quiz-option" data-correct="false" data-explanation="Candidate B explicitly names eligible weights as the target. It says nothing about activation or retained-cache quantization.">Candidate B proves that its activations and retained cache are also eight-bit.</button>
 <p class="quiz-feedback" role="status" tabindex="-1"></p><button type="button" class="quiz-reset" hidden>Try again</button>
 </fieldset>
 

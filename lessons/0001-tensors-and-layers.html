@@ -43,12 +43,22 @@
 <p><strong>Architecture scope:</strong> the following trace is a conventional decoder-only, Transformer-style model. It is a useful concrete example, not a claim that every language model uses full self-attention or a KV cache.</p>
 <ol>
 <li><strong>Text becomes IDs.</strong> A tokenizer maps text into <a href="../reference/glossary.html#token" class="glossary-link">token</a> IDs. The exact mapping belongs to the checkpoint/tokenizer revision.</li>
-<li><strong>IDs become vectors.</strong> An <a href="../reference/glossary.html#embedding-layer" class="glossary-link">embedding layer</a> looks up one learned vector per token ID.</li>
-<li><strong>Vectors become contextual representations.</strong> Repeated blocks transform the <a href="../reference/glossary.html#hidden-state" class="glossary-link">hidden state</a>. A conventional block combines normalization, causal <a href="../reference/glossary.html#attention" class="glossary-link">attention</a>, residual paths, and a position-wise <a href="../reference/glossary.html#feed-forward-network-ffn" class="glossary-link">feed-forward network</a>. Exact order, dimensions, gating, and attention pattern are architecture-specific.</li>
+<li><strong>IDs become vectors.</strong> An <a href="../reference/glossary.html#embedding-layer" class="glossary-link">embedding layer</a> looks up one learned vector per token ID. For a deliberately tiny example, suppose the selected embedding is <code>e = [1, −2]</code> with shape <code>(2,)</code>. A learned projection <code>W</code> has shape <code>(3, 2)</code>:
+<pre><code>W = [[ 0.50,  0.25],
+     [-1.00,  0.50],
+     [ 2.00, -0.50]]
+
+W × e = [0.50×1 + 0.25×(−2),
+         −1.00×1 + 0.50×(−2),
+          2.00×1 − 0.50×(−2)]
+      = [0, −2, 3]                 shape (3,)</code></pre>
+The matrix's second dimension must match the vector's only dimension; its first dimension determines the output length.</li>
+<li><strong>Vectors become contextual representations.</strong> Repeated blocks transform the <a href="../reference/glossary.html#hidden-state" class="glossary-link">hidden state</a>. A conventional block combines normalization, causal <a href="../reference/glossary.html#attention" class="glossary-link">attention</a>, residual paths, and a position-wise <a href="../reference/glossary.html#feed-forward-network-ffn" class="glossary-link">feed-forward network</a>. Exact order, dimensions, gating, and attention pattern are architecture-specific (<a href="../resources.html#canonical">canonical architecture sources</a>).</li>
 <li><strong>Representations become scores.</strong> An output projection produces <a href="../reference/glossary.html#logits" class="glossary-link">logits</a>, one raw score per vocabulary item for the next position.</li>
 <li><strong>A decoding rule selects an ID.</strong> Greedy choice, sampling, constraints, or another rule chooses the next token. The tokenizer decodes IDs back to text.</li>
 <li><strong>The next step reuses state.</strong> Conventional cached attention appends new key/value vectors and reuses old vectors. It does not store attention scores as the cache and does not normally rewrite every old entry.</li>
 </ol>
+<p><strong>Toy round trip:</strong> text <code>"blue"</code> is mapped by a fictional tokenizer to ID <code>17</code>; ID 17 selects an embedding; projections and repeated blocks transform it with the preceding context; the final vector produces vocabulary logits; a decoding rule selects ID <code>42</code>; and the same fictional tokenizer maps ID 42 to <code>" sky"</code>. Real models use much larger vectors and many blocks, but every arrow names a distinct object rather than skipping from text directly to an answer.</p>
 
 <h2>4. Architecture labels change the memory formula</h2>
 <div class="table-scroll" role="region" aria-label="Architecture-specific retained state" tabindex="0">
@@ -84,6 +94,9 @@
 <li>attribute the difference only after checking retained state, workspaces, and allocator behavior.</li>
 </ol>
 
+<h2>6. What weight-only quantization changes</h2>
+<p>In a weight-only conversion, the <a href="../reference/glossary.html#quantized-target" class="glossary-link">quantized target</a> is selected learned parameter tensors in the artifact. Their stored numeric representation and reconstruction metadata change. The tokenizer, architecture graph, prompt, decoding rule, temporary activation format, and retained-state format do not change merely because the weights changed; any of those would require a separate configuration decision. Learned behavior is primarily encoded in parameters—including the embedding lookup—but observed behavior also depends on architecture, tokenizer, prompt, decoding, and external context or tools.</p>
+
 <div class="callout"><div class="callout-title">Decision-procedure checkpoint</div><p>You can now perform the memory half of step 2: separate loaded parameters from architecture-appropriate retained state and headroom. Lesson 2 shows how a restricted numeric encoding changes selected values; later lessons add implementation and workload evidence.</p></div>
 
 <h2>Quiz: identify the memory role</h2>
@@ -114,13 +127,22 @@
 <button type="button" class="quiz-reset" hidden>Try again</button>
 </fieldset>
 
+<fieldset class="quiz-question" data-quiz data-retry="true" id="quiz4">
+<legend>4. A conversion changes only the stored numeric representation of selected projection matrices. Which object was quantized?</legend>
+<button type="button" class="quiz-option" data-correct="true" data-explanation="Projection matrices are learned parameter tensors. A weight-only conversion changes their stored representation without automatically changing runtime activations or retained state.">Selected learned parameter tensors in the artifact.</button>
+<button type="button" class="quiz-option" data-correct="false" data-explanation="Activations are created while operations execute; the scenario explicitly changed stored projection matrices instead.">Every temporary activation created during inference.</button>
+<button type="button" class="quiz-option" data-correct="false" data-explanation="Retained state is configured separately; changing stored projection matrices does not automatically change its format.">The architecture's retained runtime state.</button>
+<p class="quiz-feedback" role="status" tabindex="-1"></p>
+<button type="button" class="quiz-reset" hidden>Try again</button>
+</fieldset>
+
 <h2>References and next step</h2>
 <ul>
 <li><a href="../reference/tensors-and-layers.html">Tensors, dataflow, and runtime-state reference</a></li>
 <li><a href="../resources.html#canonical">Canonical Transformer and cache sources</a></li>
 <li><a href="../reference/quantization-decision-checklist.html">Five-step decision checklist</a></li>
 </ul>
-<div class="terms-footer"><p><strong>Terms in this lesson:</strong> <a href="../reference/glossary.html#tensor">Tensor</a> · <a href="../reference/glossary.html#parameter">Parameter</a> · <a href="../reference/glossary.html#activation">Activation</a> · <a href="../reference/glossary.html#retained-runtime-state">Retained runtime state</a> · <a href="../reference/glossary.html#artifact">Model artifact</a> · <a href="../reference/glossary.html#inference-engine">Inference engine</a> · <a href="../reference/glossary.html#token">Token</a> · <a href="../reference/glossary.html#embedding-layer">Embedding layer</a> · <a href="../reference/glossary.html#hidden-state">Hidden state</a> · <a href="../reference/glossary.html#attention">Attention</a> · <a href="../reference/glossary.html#feed-forward-network-ffn">Feed-forward network</a> · <a href="../reference/glossary.html#logits">Logits</a> · <a href="../reference/glossary.html#static-memory">Static memory</a> · <a href="../reference/glossary.html#runtime-memory">Runtime memory</a></p></div>
+<div class="terms-footer"><p><strong>Terms in this lesson:</strong> <a href="../reference/glossary.html#tensor">Tensor</a> · <a href="../reference/glossary.html#parameter">Parameter</a> · <a href="../reference/glossary.html#activation">Activation</a> · <a href="../reference/glossary.html#retained-runtime-state">Retained runtime state</a> · <a href="../reference/glossary.html#artifact">Model artifact</a> · <a href="../reference/glossary.html#inference-engine">Inference engine</a> · <a href="../reference/glossary.html#token">Token</a> · <a href="../reference/glossary.html#embedding-layer">Embedding layer</a> · <a href="../reference/glossary.html#hidden-state">Hidden state</a> · <a href="../reference/glossary.html#attention">Attention</a> · <a href="../reference/glossary.html#feed-forward-network-ffn">Feed-forward network</a> · <a href="../reference/glossary.html#logits">Logits</a> · <a href="../reference/glossary.html#static-memory">Static memory</a> · <a href="../reference/glossary.html#runtime-memory">Runtime memory</a> · <a href="../reference/glossary.html#quantized-target">Quantized target</a></p></div>
 </main>
 <nav class="course-nav" aria-label="Lesson navigation"><a href="../index.html">← Course home</a><a href="0002-how-quantization-works.html">Next: Quantization mechanics →</a></nav>
 <script src="../assets/quiz.js" defer></script>

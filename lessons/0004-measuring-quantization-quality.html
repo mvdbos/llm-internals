@@ -88,9 +88,28 @@
 </tbody>
 </table>
 </div>
+<p><strong>Intrinsic distribution measures:</strong> perplexity summarizes next-token predictive loss on a named corpus. KL divergence can compare a candidate next-token distribution <code>q</code> with a reference distribution <code>p</code>: <code>KL(p‖q) = Σ pᵢ log(pᵢ/qᵢ)</code>. Both are useful for detecting distribution change, but similar values do not prove equal chat, reasoning, safety, coding, or long-horizon agent behavior.</p>
+<p><strong>Downstream measures must match the workload:</strong> chat may use blinded preference or rubric scores; classification uses accuracy/F1; summarization uses factuality and task-specific content metrics; reasoning uses exact or rubric-scored answers; coding uses executable tests; safety uses policy-specific violation and refusal measures; agents use externally verified task completion.</p>
+<p><strong>Software-engineering agents:</strong> fail-to-pass (F2P) measures how many task-specific failing tests become passing; pass-to-pass (P2P) measures how many existing tests remain passing; binary reward is a strict guardrail that is one only when the configured pass conditions are all met. Steps, tokens, latency, and cost are secondary and must be interpreted with those quality outcomes.</p>
 <p>Report counts and denominators. For paired binary outcomes, show how often A-only passes, B-only passes, both pass, and neither passes. For continuous metrics, report per-pair deltas and distribution/uncertainty, not only two pooled averages.</p>
 
-<h2>7. Analyze without overstating</h2>
+<h2>7. Two ways pooled means manufacture a story</h2>
+<h3>Miniature mixed-architecture example</h3>
+<p><strong>Illustrative numbers only.</strong> Suppose a dense architecture scores 0.90 on an easy task and a different architecture scores 0.40 on a hard task. Condition A contains one dense/easy run and three other-architecture/hard runs; Condition B contains three dense/easy runs and one other-architecture/hard run:</p>
+<div class="table-scroll" role="region" aria-label="Mixed architecture anti-example" tabindex="0">
+<p class="scroll-hint">Scroll horizontally to inspect the composition.</p>
+<table>
+<caption>A pooled 0.25 difference created entirely by architecture/task composition</caption>
+<thead><tr><th scope="col">Nominal condition</th><th scope="col">Dense/easy observations</th><th scope="col">Other-architecture/hard observations</th><th scope="col">Pooled mean</th></tr></thead>
+<tbody><tr><th scope="row">A</th><td>1 × 0.90</td><td>3 × 0.40</td><td>0.525</td></tr><tr><th scope="row">B</th><td>3 × 0.90</td><td>1 × 0.40</td><td>0.775</td></tr></tbody>
+</table>
+</div>
+<p>No within-task, within-architecture condition contrast exists. Calling the 0.25 pooled difference a precision effect would be invalid even though the arithmetic is correct.</p>
+
+<h3>An anonymized historical anti-example</h3>
+<p>An earlier retrospective aggregation compared <code>n=29</code> discovered artifacts with <code>n=7</code>, used unmatched task sets and repetitions, counted artifacts as if they were completed trials, and mixed dense and mixture-of-experts architectures inside a broad precision category. Its pooled 74-versus-116 step averages were summarized as a 57% difference. Exact dense-family filtering changed the descriptive averages to 98.4 versus 115.6 steps—a 17.4% difference—but the remaining samples were still unmatched and had no successful exact pairs. The corrected lesson is methodological: neither percentage isolates a quantization effect, and neither supports a causal “thought duplication” explanation.</p>
+
+<h2>8. Analyze without overstating</h2>
 <ol>
 <li>Validate that every expected task × repeat × condition cell exists.</li>
 <li>Confirm parity fields and provenance before viewing outcomes.</li>
@@ -101,7 +120,7 @@
 </ol>
 <p>One controlled matrix can support a decision for its checkpoint, artifacts, engine/backend, hardware, tasks, and settings. It cannot establish a universal quantization ranking.</p>
 
-<h2>8. Connect the experiment to the decision procedure</h2>
+<h2>9. Connect the experiment to the decision procedure</h2>
 <p>This lesson implements step 4: <strong>evaluate the exact workload</strong>. The output should be a table of supported candidates with measured quality, latency, and memory—not a slogan. Lesson 5 uses those results to choose a <a href="../reference/glossary.html#pareto-point" class="glossary-link">Pareto point</a> and state uncertainty.</p>
 
 <h2>Quiz: protect the comparison</h2>
@@ -126,6 +145,22 @@
 <button type="button" class="quiz-option" data-correct="false" data-explanation="Choosing rules after results are visible allows the observed direction to influence inclusion.">After examining outcomes, so unusual failures can be removed.</button>
 <button type="button" class="quiz-option" data-correct="false" data-explanation="Silent dropping hides denominators and can bias both quality and efficiency summaries.">During analysis, without reporting which runs were dropped.</button>
 <button type="button" class="quiz-option" data-correct="true" data-explanation="Preregistration makes rerun, exclusion, and missing-pair handling independent of the result direction.">Before execution, with explicit rerun and exclusion criteria.</button>
+<p class="quiz-feedback" role="status" tabindex="-1"></p><button type="button" class="quiz-reset" hidden>Try again</button>
+</fieldset>
+
+<fieldset class="quiz-question" data-quiz data-retry="true" id="quiz4">
+<legend>4. Condition A has 29 artifacts from mixed architectures and tasks; Condition B has 7 different artifacts. Their mean steps differ. What is the valid conclusion?</legend>
+<button type="button" class="quiz-option" data-correct="false" data-explanation="The conditions differ in architecture, task composition, repetition count, and completion meaning, so the pooled step difference cannot isolate precision.">The precision difference caused the mean-step difference.</button>
+<button type="button" class="quiz-option" data-correct="true" data-explanation="Unmatched task sets and mixed architectures confound the means. Exact task-and-repetition pairs under one architecture are needed.">Reject the causal comparison and build a matched paired design.</button>
+<button type="button" class="quiz-option" data-correct="false" data-explanation="A larger artifact count does not repair confounding or turn discovered artifacts into verifier-covered outcomes.">Condition A is automatically more reliable because 29 is larger than 7.</button>
+<p class="quiz-feedback" role="status" tabindex="-1"></p><button type="button" class="quiz-reset" hidden>Try again</button>
+</fieldset>
+
+<fieldset class="quiz-question" data-quiz data-retry="true" id="quiz5">
+<legend>5. For a software-engineering agent comparison, which outcomes should be analyzed first?</legend>
+<button type="button" class="quiz-option" data-correct="true" data-explanation="F2P and P2P directly measure new-task completion and regression preservation; reward is a strict guardrail. Efficiency comes afterward and is interpreted with quality.">Paired F2P/P2P, with reward pair states as a guardrail.</button>
+<button type="button" class="quiz-option" data-correct="false" data-explanation="Fewer steps can reflect early failure as easily as efficiency, so steps need task-quality context.">Mean steps alone, because fewer steps always means a better agent.</button>
+<button type="button" class="quiz-option" data-correct="false" data-explanation="Perplexity is an intrinsic predictive diagnostic and does not directly verify repository-task completion.">Perplexity alone, because it replaces executable task verification.</button>
 <p class="quiz-feedback" role="status" tabindex="-1"></p><button type="button" class="quiz-reset" hidden>Try again</button>
 </fieldset>
 

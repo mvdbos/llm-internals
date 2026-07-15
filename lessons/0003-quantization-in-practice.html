@@ -13,7 +13,7 @@
 
 <h2>The quant selection problem</h2>
 
-<p>You've downloaded a model. You have limited VRAM or RAM. You see six different GGUF files — or your inference engine offers on-the-fly quantization. Which one do you pick?</p>
+<p>You've downloaded a model. You have limited VRAM or RAM. You see six different <a href="../reference/glossary.html#G" class="glossary-link">GGUF</a> files — or your inference engine offers on-the-fly quantization. Which one do you pick?</p>
 
 <p>The answer isn't "Q4_K_M is the sweet spot" (though it often is). The answer depends on three things:</p>
 
@@ -29,7 +29,7 @@
 
 <h3>Axis 1: Task type — what are you asking the model to do?</h3>
 
-<p>Not all tasks care about weight precision equally. The more a task requires the model to <em>maintain coherent state across many steps</em>, the more precision matters.</p>
+<p>Not all tasks care about <a href="../reference/glossary.html#W" class="glossary-link">weight</a> precision equally. The more a task requires the model to <em>maintain coherent state across many steps</em>, the more precision matters.</p>
 
 <table>
   <tr><th>Task type</th><th>Precision sensitivity</th><th>Why</th></tr>
@@ -47,7 +47,7 @@
 
 <pre><code>Model RAM ≈ parameters × bytes_per_weight  (+ 1-2 GB overhead)
 
-FP16/bf16:  params × 2 bytes
+<a href="../reference/glossary.html#F" class="glossary-link">FP16</a>/bf16:  params × 2 bytes
 Q8_0:       params × 1 byte
 Q4_K_M:     params × 0.5 bytes
 Q3_K_M:     params × 0.375 bytes
@@ -118,8 +118,8 @@ For a model you want to run:
   <div class="callout-title">🔍 The KV cache snowball</div>
   <p>Here's why quantization hits long agentic runs especially hard:</p>
   <ol>
-    <li><strong>Step 1:</strong> The model processes token 1 using quantized attention weights. The computed attention scores are slightly off — maybe 0.73 instead of the true 0.78.</li>
-    <li><strong>KV cache stores it:</strong> Those slightly-wrong attention Key and Value vectors are saved. There's no correction pass — whatever the model computed gets stored.</li>
+    <li><strong>Step 1:</strong> The model processes token 1 using quantized <a href="../reference/glossary.html#A" class="glossary-link">attention</a> weights. The computed attention scores are slightly off — maybe 0.73 instead of the true 0.78.</li>
+    <li><strong>KV cache stores it:</strong> The slightly-wrong attention Key and Value <a href="../reference/glossary.html#V" class="glossary-link">vectors</a> are saved. There's no correction pass — whatever the model computed gets stored.</li>
     <li><strong>Step 2:</strong> The model now attends to the <em>stored</em> representations from step 1, which are already degraded. The attention computation for step 2 works with fuzzy inputs, so its output is slightly <em>more</em> degraded.</li>
     <li><strong>Steps 3–100:</strong> This compounds. By step 50, the KV cache contains 50 tokens of increasingly noisy representations. The model tries to recall "what I tried 30 steps ago," but that memory is blurry. It can't reliably distinguish "already tried that" from "considered that but haven't tried it." So it tries again. And again.</li>
   </ol>
@@ -206,7 +206,12 @@ For a model you want to run:
 
 <div class="terms-footer">
   <p><strong>📖 Terms in this lesson:</strong>
+    <a href="../reference/glossary.html#W">Weight</a> ·
+    <a href="../reference/glossary.html#G">GGUF</a> ·
+    <a href="../reference/glossary.html#F">FP16</a> ·
     <a href="../reference/glossary.html#B">bf16</a> ·
+    <a href="../reference/glossary.html#A">Attention</a> ·
+    <a href="../reference/glossary.html#V">Vector</a> ·
     <a href="../reference/glossary.html#K">KV Cache</a> ·
     <a href="../reference/glossary.html#T">Thinking Budget</a> ·
     <a href="../reference/glossary.html#T">Thought Duplication</a> ·

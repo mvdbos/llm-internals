@@ -20,11 +20,14 @@
 .glossary-link {
   text-decoration: underline;
   text-decoration-style: dotted;
-  text-decoration-color: var(--muted);
+  text-decoration-color: var(--text);
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1.5px;
   color: inherit;
 }
 .glossary-link:hover {
   text-decoration-style: solid;
+  text-decoration-color: var(--accent);
   color: var(--accent);
 }
 

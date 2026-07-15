@@ -161,6 +161,29 @@ Error: 0.36 - 0.31 = 0.05  (off by 5 hundredths)</code></pre>
   <p><em>Perplexity = how "surprised" the model is by text. Lower = better. These are approximate; actual values vary by base model and domain.</em></p>
 </div>
 
+<div class="callout">
+  <div class="callout-title">⚠️ A nuance: when "near-lossless" isn't</div>
+  <p>The perplexity numbers above are measured on short text passages. They're accurate for chat, summarization, and single-shot coding — tasks where the model makes one or two reasoning hops and stops.</p>
+  <p><strong>Long-horizon agentic tasks are different.</strong> When a model edits files, runs tests, diagnoses failures, and iterates for 50–100+ steps, small per-step errors compound:</p>
+  <table>
+    <tr><th>Failure mode</th><th>Why quantization makes it worse</th></tr>
+    <tr><td>Wrong file selected</td><td>Slight ranking/logit perturbation affects search and exploration decisions.</td></tr>
+    <tr><td>Patch nearly correct but semantically off</td><td>Small reasoning drift causes a wrong invariant to be preserved.</td></tr>
+    <tr><td>Tool loop goes down a bad branch</td><td>An early mistake consumes context and anchors later reasoning.</td></tr>
+    <tr><td>Test failure diagnosis is brittle</td><td>The model needs high-fidelity causal reasoning over logs, diffs, and repository context — all slightly noisier with quantized weights.</td></tr>
+    <tr><td>Long-context state gets noisy</td><td>Small degradation repeats over many decisions, not one answer. The KV cache accumulates errors.</td></tr>
+  </table>
+  <p>This doesn't mean Q8_0 is "bad." It means <strong>the quality gap between quants widens with task length</strong>. A 0.02 perplexity increase on a paragraph is negligible. A 0.02 degradation per step across 100 steps is a different story.</p>
+  <table>
+    <tr><th>Task length</th><th>Q8_0 vs bf16</th><th>Q4_K_M vs bf16</th></tr>
+    <tr><td>Single prompt (1 turn)</td><td>Imperceptible</td><td>Barely noticeable</td></tr>
+    <tr><td>Short conversation (5–10 turns)</td><td>Imperceptible</td><td>Minor</td></tr>
+    <tr><td>Long chat / code review (20–50 turns)</td><td>Very slight</td><td>Noticeable on reasoning</td></tr>
+    <tr><td>Agentic loop (50–200 steps)</td><td>Measurable degradation</td><td>Significant degradation</td></tr>
+  </table>
+  <p><strong>Lesson 3</strong> has a concrete case study (27B model, bf16 vs 8-bit on real coding tasks: +57% steps from thought duplication) and a framework for testing this on your own workload.</p>
+</div>
+
 <h2>Your decision framework</h2>
 
 <p>Given your mission — running local models for agentic/thinking tasks — here's the heuristic:</p>

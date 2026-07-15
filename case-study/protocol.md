@@ -1,8 +1,8 @@
 # Preregistered paired quantization protocol
 
-**Protocol version:** 1.0  
-**Frozen:** 2026-07-15, before new outcome-bearing trials  
-**Parent design:** [`experiment-design.md`](experiment-design.md)  
+**Protocol version:** 1.0<br>
+**Frozen:** 2026-07-15, before new outcome-bearing trials<br>
+**Parent design:** [`experiment-design.md`](experiment-design.md)<br>
 **Status:** blocked pending all preflight gates
 
 This protocol is subordinate to the parent experiment design. A dated amendment may clarify implementation details before outcome inspection, but may not change the treatment, primary estimands, sample, or exclusion rules in response to results.

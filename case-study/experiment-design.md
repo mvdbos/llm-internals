@@ -1,8 +1,8 @@
 # Experiment design: same-backend bf16 versus MLX affine 8-bit
 
-**Frozen:** 2026-07-15, before new outcome-bearing runs  
-**Public checkpoint alias:** `dense-27b`  
-**Public architecture alias:** `dense-hybrid`  
+**Frozen:** 2026-07-15, before new outcome-bearing runs<br>
+**Public checkpoint alias:** `dense-27b`<br>
+**Public architecture alias:** `dense-hybrid`<br>
 **Status:** designed; execution is prohibited until every preflight gate below passes
 
 ## 1. Scientific question

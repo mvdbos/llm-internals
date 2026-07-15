@@ -1,8 +1,8 @@
 # Course QA record
 
-**Date:** 2026-07-15  
-**Branch:** `course-review-remediation`  
-**Published-course gate:** `python3 scripts/audit_course.py --allow-planned-lessons`  
+**Date:** 2026-07-15<br>
+**Branch:** `course-review-remediation`<br>
+**Published-course gate:** `python3 scripts/audit_course.py --allow-planned-lessons`<br>
 **Trial-dependent scope:** Lesson 5 and the result-bearing case study are intentionally deferred and were not represented as complete.
 
 ## Environment and method

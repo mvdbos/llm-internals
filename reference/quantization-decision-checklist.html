@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="A print-friendly five-step checklist for evidence-based LLM quantization decisions.">
+<title>Reference: Quantization Decision Checklist</title>
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+.decision-step { break-inside: avoid; margin: 1.25rem 0; padding: 1rem 1.2rem; border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: 6px; }
+.decision-step h2 { margin-top: 0; }
+.worksheet { display: grid; grid-template-columns: minmax(9rem, 1fr) 2fr; gap: .35rem .75rem; }
+.worksheet dt { font-weight: 600; }
+.worksheet dd { min-height: 1.8rem; margin: 0; border-bottom: 1px solid var(--border); }
+@media (max-width: 640px) { .worksheet { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<nav class="course-nav" aria-label="Breadcrumb"><a href="../index.html">← Course home</a><a href="quantization-formats.html">Format reference</a></nav>
+<main>
+<h1>Quantization decision checklist</h1>
+<p>Use these five steps in order. A candidate is not “best” in isolation: it is suitable only for a checkpoint, engine/backend, hardware target, memory boundary, and workload.</p>
+
+<section class="decision-step" id="identify">
+<h2>1. Identify the backend and quantized targets</h2>
+<ul>
+<li>Pin the source checkpoint and tokenizer revision.</li>
+<li>Name the artifact/container and conversion revision.</li>
+<li>Name the inference engine, backend, version, and hardware.</li>
+<li>List each quantized target separately: weights, activations, retained cache/state, embeddings/output, or selected tensors.</li>
+<li>Record mode, code width, group/block size, calibration or importance procedure, per-tensor exceptions, and model-file mixture recipe.</li>
+</ul>
+<dl class="worksheet"><dt>Checkpoint</dt><dd></dd><dt>Artifact</dt><dd></dd><dt>Engine/backend</dt><dd></dd><dt>Hardware</dt><dd></dd><dt>Quantized targets and recipe</dt><dd></dd></dl>
+</section>
+
+<section class="decision-step" id="calculate-memory">
+<h2>2. Calculate memory</h2>
+<ul>
+<li>Record artifact bytes; do not call them runtime memory.</li>
+<li>Estimate or measure loaded parameter allocation. If estimating, use effective bpw—not nominal code width.</li>
+<li>Estimate architecture-appropriate retained state. Use a grouped-query-aware KV formula only for conventional cached attention; use a different state model for recurrent, state-space, linear-attention, or hybrid architectures.</li>
+<li>Add temporary activations, workspaces, allocator/runtime overhead, and explicit headroom.</li>
+<li>Verify with a peak measurement under the intended batch, prompt length, and generated length.</li>
+</ul>
+<pre><code>peak_runtime_memory
+≈ loaded_parameters
++ retained_runtime_state
++ activations_and_workspaces
++ runtime_overhead
++ safety_headroom</code></pre>
+<dl class="worksheet"><dt>Artifact bytes</dt><dd></dd><dt>Loaded parameters</dt><dd></dd><dt>Retained state</dt><dd></dd><dt>Measured peak</dt><dd></dd><dt>Headroom</dt><dd></dd></dl>
+</section>
+
+<section class="decision-step" id="shortlist">
+<h2>3. Shortlist formats that fit</h2>
+<ul>
+<li>Eliminate candidates that exceed the measured memory boundary with headroom.</li>
+<li>Confirm the pinned engine can load every tensor type and metadata field.</li>
+<li>Confirm native kernels exist for the target hardware; record unpacking, dequantization, copy, or device fallbacks.</li>
+<li>Measure prefill and decode latency/throughput. A smaller artifact is not automatically faster.</li>
+<li>Keep multiple candidates when their memory/speed differences overlap measurement noise.</li>
+</ul>
+<dl class="worksheet"><dt>Candidate aliases</dt><dd></dd><dt>Loader support</dt><dd></dd><dt>Kernel/fallback notes</dt><dd></dd><dt>Measured memory</dt><dd></dd><dt>Prefill/decode speed</dt><dd></dd></dl>
+</section>
+
+<section class="decision-step" id="evaluate">
+<h2>4. Evaluate the exact workload</h2>
+<ul>
+<li>Pair the same task instance across conditions and hold the agent/harness, tools, prompts, token/context limits, sampling, environment, and scoring fixed.</li>
+<li>Use task-specific quality metrics and an external verifier where possible; do not replace workload evidence with perplexity alone.</li>
+<li>Repeat stochastic runs and retain all failures. Report paired deltas, variation, and uncertainty.</li>
+<li>Preregister exclusions, timeouts, missing-data handling, and any secondary diagnostics.</li>
+<li>Keep qualitative traces private when they contain prompts, patches, paths, or exact private identities; publish only sanitized aggregate evidence.</li>
+</ul>
+<dl class="worksheet"><dt>Task set and aliases</dt><dd></dd><dt>Primary metric</dt><dd></dd><dt>Controlled settings</dt><dd></dd><dt>Repeats</dt><dd></dd><dt>Uncertainty/exclusions</dt><dd></dd></dl>
+</section>
+
+<section class="decision-step" id="choose">
+<h2>5. Choose the Pareto point</h2>
+<ul>
+<li>Plot or tabulate quality, latency, and peak memory for every surviving candidate.</li>
+<li>Discard candidates dominated on all declared objectives.</li>
+<li>Choose among the remaining Pareto points using the workload's actual constraints—not a universal format ranking.</li>
+<li>State residual uncertainty, version scope, and the conditions that would trigger re-evaluation.</li>
+</ul>
+<dl class="worksheet"><dt>Chosen candidate</dt><dd></dd><dt>Why this Pareto point</dt><dd></dd><dt>Trade-off accepted</dt><dd></dd><dt>Residual uncertainty</dt><dd></dd><dt>Re-evaluate when</dt><dd></dd></dl>
+</section>
+
+<h2>Release check</h2>
+<ul>
+<li>Every implementation claim links to a pinned canonical source.</li>
+<li>Every numerical result names model/artifact scope and measurement method.</li>
+<li>Hypotheses are labeled and kept separate from observations.</li>
+<li>Public artifacts use stable aliases and expose no private identity, prompt, patch, path, or raw trajectory.</li>
+</ul>
+<p>Supporting references: <a href="quantization-formats.html">artifacts, encodings, and runtimes</a> · <a href="tensors-and-layers.html">tensors and runtime state</a> · <a href="../resources.html#canonical">evidence ledger</a>.</p>
+</main>
+<nav class="course-nav" aria-label="Footer"><a href="../index.html">← Course home</a><a href="quantization-formats.html">Format reference</a></nav>
+</body>
+</html>

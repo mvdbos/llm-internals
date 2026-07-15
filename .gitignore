@@ -5,3 +5,4 @@ case-study/private/*
 !case-study/private/README.md
 !case-study/private/manifest.example.json
 case-study/raw/
+jobs/

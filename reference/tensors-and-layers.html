@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reference: Tensors &amp; Layers</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+
+<h1>Reference: Tensors &amp; Layers</h1>
+<p><em>Cheat sheet. Print-friendly.</em></p>
+
+<h2>Tensors</h2>
+
+<table>
+  <tr><th>Rank</th><th>Name</th><th>Shape example</th><th>What it holds</th></tr>
+  <tr><td>0</td><td>Scalar</td><td><code>()</code></td><td>A single number: <code>3.14</code></td></tr>
+  <tr><td>1</td><td>Vector</td><td><code>(768,)</code></td><td>A list of numbers: a word embedding</td></tr>
+  <tr><td>2</td><td>Matrix</td><td><code>(768, 768)</code></td><td>A 2D grid: a layer's weight matrix</td></tr>
+  <tr><td>3</td><td>3D Tensor</td><td><code>(batch, seq, hidden)</code></td><td>A batch of sequences: what flows through the model</td></tr>
+  <tr><td>4</td><td>4D Tensor</td><td><code>(batch, heads, seq, dim)</code></td><td>Attention head outputs</td></tr>
+</table>
+
+<h2>Key tensor shapes in an LLM</h2>
+
+<table>
+  <tr><th>Tensor</th><th>Typical shape</th><th>What it is</th></tr>
+  <tr><td>Input tokens</td><td><code>(batch_size, seq_len)</code></td><td>Token IDs for each sequence in the batch</td></tr>
+  <tr><td>Embeddings</td><td><code>(batch, seq, d_model)</code></td><td>Each token converted to a dense vector (e.g. 4096 dims)</td></tr>
+  <tr><td>Attention Q/K/V</td><td><code>(batch, heads, seq, d_head)</code></td><td>Query, Key, Value projections per attention head</td></tr>
+  <tr><td>Hidden states</td><td><code>(batch, seq, d_model)</code></td><td>Output of each transformer layer</td></tr>
+  <tr><td>Logits</td><td><code>(batch, seq, vocab_size)</code></td><td>Raw scores for every possible next token</td></tr>
+</table>
+
+<h2>Layer types in a transformer</h2>
+
+<table>
+  <tr><th>Layer</th><th>What it does</th><th>Has weights?</th></tr>
+  <tr><td>Embedding</td><td>Token ID → dense vector</td><td>✅ Embedding table (vocab × d_model numbers)</td></tr>
+  <tr><td>Self-Attention</td><td>Each word "looks at" all other words to gather context</td><td>✅ Q, K, V, and output projection matrices</td></tr>
+  <tr><td>Feed-Forward (FFN)</td><td>Per-position non-linear transformation. The "thinking" part.</td><td>✅ Two large weight matrices (d_model → 4×d_model → d_model)</td></tr>
+  <tr><td>Layer Norm</td><td>Normalizes values to stable ranges</td><td>✅ Small: just scale + bias per dimension</td></tr>
+  <tr><td>Output (LM head)</td><td>Final hidden state → vocabulary probabilities</td><td>✅ Projection matrix (d_model × vocab_size)</td></tr>
+</table>
+
+<h2>Where the parameters live</h2>
+
+<p>In a typical 7B transformer model:</p>
+
+<table>
+  <tr><th>Component</th><th>Approx. % of params</th></tr>
+  <tr><td>Feed-Forward layers (all of them)</td><td>~65%</td></tr>
+  <tr><td>Attention layers (Q/K/V/O projections)</td><td>~30%</td></tr>
+  <tr><td>Embedding + Output</td><td>~5%</td></tr>
+  <tr><td>Layer Norms</td><td>&lt;0.1%</td></tr>
+</table>
+
+<p>This distribution matters for quantization: the FFN layers hold most of the weights, so they dominate both memory usage and precision sensitivity.</p>
+
+<h2>Memory formula</h2>
+
+<pre><code>Model memory ≈ num_parameters × bytes_per_parameter
+
+FP32: 4 bytes/param → 7B model ≈ 28 GB
+FP16: 2 bytes/param → 7B model ≈ 14 GB
+Q8:   1 byte/param  → 7B model ≈  7 GB (+ small overhead)
+Q4:   0.5 bytes/param → 7B model ≈ 3.5 GB (+ overhead)
+Q2:   0.25 bytes/param → 7B model ≈ 1.75 GB (+ overhead)
+</code></pre>
+
+<p><em>Actual usage is higher: add ~1-2 GB for KV cache, activations, and framework overhead.</em></p>
+
+<div class="lesson-footer">
+  <p><a href="../lessons/0001-tensors-and-layers.html">← Back to Lesson 1</a> · <a href="glossary.html">Glossary</a> · <a href="../MISSION.md">Mission</a></p>
+</div>
+
+</body>
+</html>

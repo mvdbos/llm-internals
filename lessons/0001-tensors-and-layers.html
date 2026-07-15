@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 1: Tensors &amp; Layers — The LEGO Bricks of LLMs</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+
+<h1>Lesson 1: Tensors &amp; Layers</h1>
+<p><em>The LEGO bricks that make an LLM tick. ~5 minutes.</em></p>
+
+<h2>What's a tensor?</h2>
+
+<p>A <strong>tensor</strong> is just a grid of numbers. Nothing scarier than that.</p>
+
+<p>You already know tensors, even if nobody called them that:</p>
+
+<table>
+  <tr><th>Dimension</th><th>Name</th><th>What it looks like</th><th>Example</th></tr>
+  <tr>
+    <td>0D</td><td>Scalar</td><td>A single number</td><td><code>42</code></td>
+  </tr>
+  <tr>
+    <td>1D</td><td>Vector</td><td>A row of numbers</td><td><code>[0.2, 0.8, -0.5]</code></td>
+  </tr>
+  <tr>
+    <td>2D</td><td>Matrix</td><td>A table of numbers</td><td>A spreadsheet grid</td>
+  </tr>
+  <tr>
+    <td>3D+</td><td>Tensor</td><td>A cube (or more) of numbers</td><td>A stack of spreadsheets</td>
+  </tr>
+</table>
+
+<p>In practice, ML people call <em>everything</em> a tensor — scalars, vectors, matrices, all of it. The word just means "numbers flowing through the model."</p>
+
+<blockquote>
+  <strong>ELI5 version:</strong> Imagine a factory conveyor belt. Each item on the belt is a tray with little compartments holding numbers. That tray is a tensor. The model moves trays from station to station, and each station changes the numbers in some way.
+</blockquote>
+
+<h2>What's a layer?</h2>
+
+<p>A <strong>layer</strong> is one of those stations. It takes a tensor in, does math to it, and spits a (usually different) tensor out.</p>
+
+<pre><code>Input tensor  →  [ Layer: math operations ]  →  Output tensor</code></pre>
+
+<p>What math? Mostly two things:</p>
+
+<ol>
+  <li><strong>Multiply</strong> the input numbers by a set of stored numbers called <em>weights</em></li>
+  <li><strong>Add</strong> some more stored numbers called <em>biases</em></li>
+</ol>
+
+<p>The <strong>weights</strong> are the "knowledge" of the layer — they're what the model learned during training. When you download an LLM, you're downloading billions of these weight numbers.</p>
+
+<div class="callout">
+  <div class="callout-title">🧠 Key insight</div>
+  <p>The entire "intelligence" of an LLM lives in its weights. There's no database, no lookup table, no magic — just billions of carefully tuned numbers that, when multiplied and added together in the right sequence, produce coherent text.</p>
+</div>
+
+<h2>How layers stack into an LLM</h2>
+
+<p>An LLM is a <strong>stack of layers</strong>. Like this:</p>
+
+<pre><code>
+Words → [Embedding layer] → [Layer 1] → [Layer 2] → ... → [Layer N] → [Output layer] → Next word
+         (words→numbers)     (transformer blocks — the "thinking")      (numbers→word predictions)
+</code></pre>
+
+<p>Let's break each part down:</p>
+
+<table>
+  <tr><th>Part</th><th>What it does</th><th>ELI5</th></tr>
+  <tr>
+    <td>Embedding layer</td>
+    <td>Converts each word into a tensor (a vector of ~4096 or ~8192 numbers)</td>
+    <td>Turns "cat" into a fingerprint of numbers that captures what "cat" means</td>
+  </tr>
+  <tr>
+    <td>Transformer layers</td>
+    <td>The bulk of the model. Each layer mixes information between words and transforms the representations. A 7B model might have 32 of these.</td>
+    <td>32 rounds of "think about this word in context of all the other words"</td>
+  </tr>
+  <tr>
+    <td>Output layer</td>
+    <td>Converts the final tensor back into a probability for each possible next word</td>
+    <td>After all that thinking: "the next word is probably 'sat' (followed by 'on', 'the', 'mat')"</td>
+  </tr>
+</table>
+
+<h2>Why this matters for quantization</h2>
+
+<p>Every one of those layers stores its <strong>weights as numbers</strong> — floating-point numbers that take up 16 or 32 bits each. In a 7 billion parameter model:</p>
+
+<ul>
+  <li>At <strong>16-bit</strong> (FP16): 7B × 2 bytes = <strong>14 GB</strong></li>
+  <li>At <strong>4-bit</strong> (Q4): 7B × 0.5 bytes = <strong>3.5 GB</strong></li>
+</ul>
+
+<p>Quantization compresses those weight numbers — from 16 bits down to 8 bits, 4 bits, or even lower. The tradeoff: fewer bits = less memory, but each weight is <em>slightly fuzzier</em>. Some layers care more about precision than others. That's what we'll explore next.</p>
+
+<div class="callout">
+  <div class="callout-title">🔗 What's next?</div>
+  <p>In <a href="0002-how-quantization-works.html">Lesson 2: How Quantization Works</a> we'll see exactly what happens when you shrink 16 bits into 4 bits, and why it usually works better than you'd expect.</p>
+</div>
+
+<h2>Quiz: Test yourself</h2>
+
+<div class="quiz" id="quiz1">
+  <div class="quiz-question">Q1. In an LLM, where does the "knowledge" actually live?</div>
+  <button class="quiz-option" data-correct="false">In the embedding layer — that's where words get their meaning</button>
+  <button class="quiz-option" data-correct="false">In the output layer — that's where word predictions are made</button>
+  <button class="quiz-option" data-correct="true">In the weights spread across all the layers</button>
+  <button class="quiz-option" data-correct="false">In a separate database the model references during inference</button>
+  <div class="quiz-feedback" id="quiz1-feedback"></div>
+</div>
+
+<div class="quiz" id="quiz2">
+  <div class="quiz-question">Q2. A 7B parameter model at 16-bit uses ~14 GB. Roughly how much at 4-bit?</div>
+  <button class="quiz-option" data-correct="false">~7 GB (half)</button>
+  <button class="quiz-option" data-correct="true">~3.5 GB (quarter)</button>
+  <button class="quiz-option" data-correct="false">~1.75 GB (eighth)</button>
+  <button class="quiz-option" data-correct="false">~10 GB (can't compress that much)</button>
+  <div class="quiz-feedback" id="quiz2-feedback"></div>
+</div>
+
+<div class="quiz" id="quiz3">
+  <div class="quiz-question">Q3. What is a tensor, in the simplest terms?</div>
+  <button class="quiz-option" data-correct="false">A special kind of GPU instruction</button>
+  <button class="quiz-option" data-correct="false">A mathematical proof that the model converges</button>
+  <button class="quiz-option" data-correct="true">A grid of numbers flowing through the model</button>
+  <button class="quiz-option" data-correct="false">The file format models are saved in</button>
+  <div class="quiz-feedback" id="quiz3-feedback"></div>
+</div>
+
+<h2>Dig deeper</h2>
+
+<ul>
+  <li>📺 <strong>Watch:</strong> <a href="https://www.youtube.com/watch?v=wjZofJX0v4M">3Blue1Brown: Transformers (Deep Learning Ch. 5)</a> — visual tour of how data flows through layers</li>
+  <li>📖 <strong>Read:</strong> <a href="https://jalammar.github.io/illustrated-transformer/">The Illustrated Transformer</a> by Jay Alammar</li>
+  <li>📄 <strong>Reference:</strong> <a href="../reference/tensors-and-layers.html">Tensors &amp; Layers Reference</a> — the cheat sheet version</li>
+</ul>
+
+<div class="lesson-footer">
+  <p>Lesson 1 of the LLM Internals series. <a href="../MISSION.md">Mission</a> · <a href="../RESOURCES.md">Resources</a></p>
+  <p><em>Stuck? Confused? Ask your agent teacher a followup question — that's what I'm here for.</em></p>
+</div>
+
+<script>
+// Quiz logic
+document.querySelectorAll('.quiz').forEach(quiz => {
+  const feedback = quiz.querySelector('.quiz-feedback');
+  quiz.querySelectorAll('.quiz-option').forEach(btn => {
+    btn.addEventListener('click', () => {
+      // Reset all buttons in this quiz
+      quiz.querySelectorAll('.quiz-option').forEach(b => {
+        b.classList.remove('correct', 'incorrect');
+        b.disabled = true;
+      });
+      const isCorrect = btn.dataset.correct === 'true';
+      btn.classList.add(isCorrect ? 'correct' : 'incorrect');
+      feedback.textContent = isCorrect
+        ? '✅ Correct!'
+        : '❌ Not quite — the correct answer is highlighted in green.';
+    });
+  });
+});
+</script>
+
+</body>
+</html>

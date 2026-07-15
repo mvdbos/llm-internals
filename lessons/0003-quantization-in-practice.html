@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 3: Quantization in Practice — Your Setup</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+
+<h1>Lesson 3: Quantization in Practice</h1>
+<p><em>Applying everything to your actual setup: oMLX, Qwen models, and Deep-SWE benchmarks. ~8 minutes.</em></p>
+
+<h2>Your setup</h2>
+
+<table>
+  <tr><th>Component</th><th>What you run</th></tr>
+  <tr><td>Inference engine</td><td><strong>oMLX</strong> (Apple MLX-based local inference)</td></tr>
+  <tr><td>Primary models</td><td>Qwen3.6 variants (27B, 35B)</td></tr>
+  <tr><td>Benchmarks</td><td>Deep-SWE: pier + mini-swe-agent solving real GitHub issues</td></tr>
+  <tr><td>Model format</td><td>Original bf16 weights, quantized via oMLX's built-in quantization</td></tr>
+</table>
+
+<div class="callout">
+  <div class="callout-title">💡 Why this matters differently for you</div>
+  <p>Unlike most people downloading GGUF files from Hugging Face, you quantize <em>at runtime</em> via oMLX. This means you can switch between bf16, 8-bit, and 4-bit without re-downloading. It also means you're using oMLX's quantization implementation — which may differ subtly from llama.cpp's GGUF quants. The principles are the same, but your control is finer-grained.</p>
+</div>
+
+<h2>What your benchmarks show: bf16 vs 8-bit</h2>
+
+<p>You ran the same Deep-SWE tasks (real GitHub issues like fixing drizzle-orm window functions, FastAPI deprecation handling, httpx multipart parsing) through both <code>Qwen3.6-27B-bf16</code> and <code>Qwen3.6-27B-8bit</code>. Here's what happened:</p>
+
+<table>
+  <tr><th>Metric</th><th>bf16</th><th>8-bit</th><th>Delta</th></tr>
+  <tr><td>Avg steps per task</td><td>74</td><td>116</td><td><strong>+57%</strong></td></tr>
+  <tr><td>Thought duplication</td><td>None (ratio = 1.0)</td><td>Systematic (ratio &lt; 1.0)</td><td>Qualitative cliff</td></tr>
+  <tr><td>Peak context tokens</td><td>~77k-105k</td><td>Similar range</td><td>No difference</td></tr>
+</table>
+
+<p>The step increase isn't because 8-bit is "slower per step" — it's because the model <strong>repeats itself</strong>. It tries something, forgets what it did, and tries again. Or it gets stuck in a loop of similar-looking reasoning. Each duplicate thought burns steps without progress.</p>
+
+<blockquote>
+  <strong>The root cause:</strong> quantization noise in the attention weights means the model can't reliably track what it already did. In a long agentic loop (100+ steps), small per-step errors in self-attention compound. The model's "working memory" — sustained through the KV cache — gets noisier with each step. bf16 preserves enough precision to maintain coherent chains of thought; 8-bit doesn't.
+</blockquote>
+
+<h2>Why thinking budget doesn't fix it</h2>
+
+<p>You tested this hypothesis: maybe the 8-bit model just needs more thinking tokens? The answer was no. Increasing the thinking budget on the 8-bit model didn't help — it just produced <em>more</em> duplicated thoughts. The model wasn't running out of space to think; it was producing lower-quality thoughts to begin with.</p>
+
+<div class="callout">
+  <div class="callout-title">🧠 Key insight: Quantization degrades reasoning quality, not capacity</div>
+  <p>The model can still "think" for the same number of tokens. But with fuzzy weights, each thought is slightly less coherent. Over a long chain, those slight degradations compound. A model at Q4 doesn't run out of ideas — it just has subtly worse ideas, and those worse ideas lead it down paths that need more correction steps.</p>
+</div>
+
+<h2>What this means for your quant choices</h2>
+
+<p>Based on your actual workload (agentic SWE, reasoning-heavy, long context windows):</p>
+
+<table>
+  <tr><th>Task type</th><th>Recommended</th><th>Why</th></tr>
+  <tr><td>Deep-SWE / agentic coding</td><td><strong>bf16</strong></td><td>Long chains of reasoning. The 57% step penalty from 8-bit likely erases any speed gain from smaller weights.</td></tr>
+  <tr><td>Code review / PR analysis</td><td><strong>Q8_0 or Q6_K</strong></td><td>Still reasoning-heavy but shorter context. 8-bit often indistinguishable.</td></tr>
+  <tr><td>General chat / Q&A</td><td><strong>Q4_K_M</strong></td><td>Short exchanges. The degradation is there but rarely noticeable.</td></tr>
+  <tr><td>Creative writing / brainstorming</td><td><strong>Q4_K_M or IQ4_XS</strong></td><td>Fuzziness in weights can even add useful "creativity." Precision matters least here.</td></tr>
+  <tr><td>Summarization / classification</td><td><strong>Q4_K_M</strong></td><td>Shallow reasoning. Model doesn't need to track complex state.</td></tr>
+</table>
+
+<h2>A systematic approach to choosing quants</h2>
+
+<p>Instead of guessing, here's a lightweight benchmarking procedure:</p>
+
+<pre><code>
+For a new model you want to run:
+
+1. Run the SAME task through bf16 and your candidate quant
+   - Pick a representative task from your workload (e.g., one Deep-SWE issue)
+   - Compare: steps taken, unique_thoughts/total_thoughts ratio, final outcome
+
+2. If steps increase by &lt;10% and thoughts stay clean → the quant is safe
+   If steps increase by 10-30% and thoughts show some duplication → borderline
+   If steps increase by &gt;30% and thoughts are messy → the quant is too aggressive
+
+3. Test on 2-3 diverse tasks before committing to a quant for production use
+
+4. For agentic workloads specifically: privilege precision.
+   The cost of a bad step (wrong file edited, bad diagnosis) is much higher
+   than the cost of loading a slightly larger model.
+</code></pre>
+
+<h2>The bigger picture: when does precision actually matter?</h2>
+
+<p>Not all "intelligence" is equally sensitive to weight precision. Think of it as a spectrum:</p>
+
+<table>
+  <tr><th>Capability</th><th>Precision sensitivity</th><th>Why</th></tr>
+  <tr><td>Factual recall</td><td>🟢 Low</td><td>Facts are encoded redundantly across many weights. Small errors cancel out.</td></tr>
+  <tr><td>Language fluency</td><td>🟢 Low</td><td>Grammar and style are over-learned; robust to noise.</td></tr>
+  <tr><td>Pattern matching</td><td>🟡 Medium</td><td>Needs enough precision to distinguish similar-but-different patterns.</td></tr>
+  <tr><td>Multi-step reasoning</td><td>🔴 High</td><td>Each step depends on the previous one. Small errors compound.</td></tr>
+  <tr><td>Long-horizon planning</td><td>🔴 Very high</td><td>The model must maintain a coherent "state" across many operations.</td></tr>
+</table>
+
+<p>Your Deep-SWE benchmarks hit the bottom two rows — multi-step reasoning over long horizons. That's the worst case for quantization. A creative writing use case hits the top two — the best case.</p>
+
+<div class="callout">
+  <div class="callout-title">📊 The 35B question</div>
+  <p>You also run Qwen3.6-35B. Larger models are <strong>more robust to quantization</strong> because they have more redundancy. A 35B at Q4_K_M might outperform a 27B at Q8_0 on reasoning tasks, simply because the extra parameters compensate for the fuzzier weights. When you benchmark, always compare <em>across model sizes</em>, not just within one model at different quants. The best setup might be: bigger model, more aggressive quant.</p>
+</div>
+
+<h2>Quiz: Test yourself</h2>
+
+<div class="quiz" id="quiz1">
+  <div class="quiz-question">Q1. In your Deep-SWE benchmarks, switching from bf16 to 8-bit caused what primary problem?</div>
+  <button class="quiz-option" data-correct="false">The model ran out of thinking budget and produced shorter responses</button>
+  <button class="quiz-option" data-correct="true">Systematic thought duplication — the model repeated itself in loops</button>
+  <button class="quiz-option" data-correct="false">The model became much slower per step due to dequantization overhead</button>
+  <button class="quiz-option" data-correct="false">The model hallucinated incorrect code syntax more often</button>
+  <div class="quiz-feedback" id="quiz1-feedback"></div>
+</div>
+
+<div class="quiz" id="quiz2">
+  <div class="quiz-question">Q2. Why doesn't increasing the thinking budget fix quantization-related quality loss?</div>
+  <button class="quiz-option" data-correct="true">The model produces lower-quality thoughts, not fewer thoughts. More budget = more fuzzy thoughts.</button>
+  <button class="quiz-option" data-correct="false">Thinking budget is capped by the model architecture regardless of quantization</button>
+  <button class="quiz-option" data-correct="false">The thinking budget is stored in the weights, which are themselves quantized</button>
+  <button class="quiz-option" data-correct="false">oMLX doesn't support configurable thinking budgets</button>
+  <div class="quiz-feedback" id="quiz2-feedback"></div>
+</div>
+
+<div class="quiz" id="quiz3">
+  <div class="quiz-question">Q3. For which type of task is aggressive quantization (Q4 or lower) LEAST harmful?</div>
+  <button class="quiz-option" data-correct="false">Long-horizon agentic coding (like Deep-SWE)</button>
+  <button class="quiz-option" data-correct="false">Multi-step mathematical reasoning</button>
+  <button class="quiz-option" data-correct="true">Creative writing and brainstorming</button>
+  <button class="quiz-option" data-correct="false">Code review requiring precise bug detection</button>
+  <div class="quiz-feedback" id="quiz3-feedback"></div>
+</div>
+
+<h2>Taking it further</h2>
+
+<ul>
+  <li>🏗️ <strong>Try:</strong> Run the same Deep-SWE task through bf16, Q8, Q6, and Q4. Measure steps + thought uniqueness. You'll have a personal calibration curve.</li>
+  <li>📖 <strong>Read:</strong> <a href="https://mljourney.com/quantized-llms-explained-q4-vs-q8-vs-fp16/">ML Journey: Quantized LLMs Explained</a> — comprehensive practical guide</li>
+  <li>👥 <strong>Community:</strong> <a href="https://reddit.com/r/LocalLLaMA">r/LocalLLaMA</a> — real-world quantization experiences, especially the "Q4 vs Q8 for coding" threads</li>
+  <li>📄 <strong>Reference:</strong> <a href="../reference/quantization-formats.html">Quantization Formats Reference</a> — the cheat sheet</li>
+</ul>
+
+<div class="lesson-footer">
+  <p><a href="0001-tensors-and-layers.html">Lesson 1</a> · <a href="0002-how-quantization-works.html">Lesson 2</a> · <strong>Lesson 3</strong></p>
+  <p><em>Want to benchmark your own models? I can help you set up a systematic comparison. Just ask.</em></p>
+</div>
+
+<script>
+document.querySelectorAll('.quiz').forEach(quiz => {
+  const feedback = quiz.querySelector('.quiz-feedback');
+  quiz.querySelectorAll('.quiz-option').forEach(btn => {
+    btn.addEventListener('click', () => {
+      quiz.querySelectorAll('.quiz-option').forEach(b => {
+        b.classList.remove('correct', 'incorrect');
+        b.disabled = true;
+      });
+      const isCorrect = btn.dataset.correct === 'true';
+      btn.classList.add(isCorrect ? 'correct' : 'incorrect');
+      feedback.textContent = isCorrect
+        ? '✅ Correct!'
+        : '❌ Not quite — the correct answer is highlighted in green.';
+    });
+  });
+});
+</script>
+
+</body>
+</html>

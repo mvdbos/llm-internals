@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reference: Quantization Formats</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+
+<h1>Reference: Quantization Formats</h1>
+<p><em>Cheat sheet for GGUF quant types. Print-friendly.</em></p>
+
+<h2>Format reference card</h2>
+
+<table>
+  <tr><th>Format</th><th>Bits</th><th>7B size</th><th>13B size</th><th>Quality vs FP16</th></tr>
+  <tr><td><code>F16</code></td><td>16.0</td><td>14.0 GB</td><td>26.0 GB</td><td>100% — baseline</td></tr>
+  <tr><td><code>Q8_0</code></td><td>8.0</td><td>7.0 GB</td><td>13.0 GB</td><td>~99% — near-lossless</td></tr>
+  <tr><td><code>Q6_K</code></td><td>6.0</td><td>5.3 GB</td><td>9.8 GB</td><td>~98% — excellent</td></tr>
+  <tr><td><code>Q5_K_M</code></td><td>5.0</td><td>4.5 GB</td><td>8.2 GB</td><td>~97% — very good</td></tr>
+  <tr><td><code>Q5_K_S</code></td><td>5.0</td><td>4.3 GB</td><td>7.9 GB</td><td>~96% — good</td></tr>
+  <tr><td><code>Q4_K_M</code></td><td>4.0</td><td>3.8 GB</td><td>7.0 GB</td><td>~95% — community sweet spot</td></tr>
+  <tr><td><code>Q4_K_S</code></td><td>4.0</td><td>3.6 GB</td><td>6.6 GB</td><td>~93% — OK for simple use</td></tr>
+  <tr><td><code>IQ4_XS</code></td><td>4.0</td><td>3.5 GB</td><td>6.5 GB</td><td>~94% — often beats Q4_K_M</td></tr>
+  <tr><td><code>Q3_K_M</code></td><td>3.0</td><td>3.1 GB</td><td>5.7 GB</td><td>~88% — reasoning degrades</td></tr>
+  <tr><td><code>IQ3_XXS</code></td><td>~3.0</td><td>2.9 GB</td><td>5.4 GB</td><td>~85% — significant loss</td></tr>
+  <tr><td><code>Q2_K</code></td><td>2.0</td><td>2.5 GB</td><td>4.5 GB</td><td>~75% — avoid for reasoning</td></tr>
+</table>
+
+<h2>Quick decision matrix</h2>
+
+<table>
+  <tr><th>Your priority</th><th>Recommended format</th></tr>
+  <tr><td>Maximum quality (I have RAM)</td><td><code>Q8_0</code> or <code>F16</code></td></tr>
+  <tr><td>Best quality/size tradeoff</td><td><code>Q4_K_M</code></td></tr>
+  <tr><td>Quality for reasoning/agentic tasks</td><td><code>Q6_K</code> minimum, <code>Q8_0</code> preferred</td></tr>
+  <tr><td>Quality for creative writing</td><td><code>Q4_K_M</code> usually fine</td></tr>
+  <tr><td>Smallest file that still works</td><td><code>IQ4_XS</code> or <code>Q3_K_M</code></td></tr>
+  <tr><td>Smallest possible (emergency)</td><td><code>IQ2_XXS</code> — but expect quality cliffs</td></tr>
+</table>
+
+<h2>Suffix decoder ring</h2>
+
+<pre><code>
+[Q|IQ][bits]_[K?][S|M|L|XS|XXS]
+
+Q   = traditional linear quantization (evenly spaced buckets)
+IQ  = importance-weighted (more precision for important weights)
+K   = per-layer-type block sizes (K-quant superblock)
+S   = small variant (fewer weights at higher precision)
+M   = medium variant (the default sweet spot)
+L   = large variant (more weights at higher precision)
+XS  = extra-small (IQ only, more aggressive)
+XXS = extra-extra-small (IQ only, most aggressive)
+_0  = legacy format with fixed block size 32 (no K-quant)
+</code></pre>
+
+<h2>Memory formula (approximate)</h2>
+
+<pre><code>
+model_size_GB ≈ (num_params × bits_per_weight / 8) + overhead
+
+Where:
+  num_params is in billions
+  bits_per_weight is the effective average (e.g., Q4_K_M ≈ 4.6)
+  overhead ≈ 0.3-0.5 GB for small models, 0.5-2 GB for large models
+
+Example: Qwen3.6-35B at Q4_K_M
+  ≈ (35 × 4.6 / 8) + 1.0
+  ≈ 20.1 + 1.0
+  ≈ 21 GB
+</code></pre>
+
+<h2>Your benchmarks (Deep-SWE context)</h2>
+
+<table>
+  <tr><th>Quant</th><th>Observed behavior</th></tr>
+  <tr><td><code>bf16</code> (FP16)</td><td>Clean thought patterns. No duplication. Best agentic performance.</td></tr>
+  <tr><td><code>8-bit</code> (Q8_0)</td><td>Systematic thought duplication. Reasoning quality degraded measurably.</td></tr>
+</table>
+
+<p><em>This matches the general pattern: for agentic/reasoning tasks, precision matters more than for creative or conversational use. The model can't compensate for fuzzy weights when it needs to follow a long chain of logic.</em></p>
+
+<div class="lesson-footer">
+  <p><a href="../lessons/0002-how-quantization-works.html">← Back to Lesson 2</a> · <a href="glossary.html">Glossary</a> · <a href="../MISSION.md">Mission</a></p>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 2: How Quantization Actually Works</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+
+<h1>Lesson 2: How Quantization Actually Works</h1>
+<p><em>From 16-bit floats to 4-bit integers — and why the model still works. ~7 minutes.</em></p>
+
+<h2>What quantization does</h2>
+
+<p>Every weight in an LLM is stored as a number. At FP16, each number uses <strong>16 bits</strong> (2 bytes). Quantization says: "what if we stored each weight in <strong>fewer bits</strong>?"</p>
+
+<table>
+  <tr><th>Format</th><th>Bits per weight</th><th>Distinct values</th><th>Analogy</th></tr>
+  <tr><td>FP16</td><td>16</td><td>65,536 (in any range)</td><td>Measuring to the millimeter</td></tr>
+  <tr><td>Q8 (8-bit)</td><td>8</td><td>256</td><td>Measuring to the centimeter</td></tr>
+  <tr><td>Q4 (4-bit)</td><td>4</td><td>16</td><td>Measuring to the nearest 10 cm</td></tr>
+  <tr><td>Q2 (2-bit)</td><td>2</td><td>4</td><td>Measuring to the nearest half-meter</td></tr>
+</table>
+
+<blockquote>
+  <strong>ELI5 version:</strong> You have a photo. The original has millions of colors (FP16). You convert it to 256 colors (Q8) — it looks almost the same. You convert to 16 colors (Q4) — it looks slightly posterized but still recognizable. You convert to 4 colors (Q2) — now it's barely recognizable. Quantization is the same tradeoff for model weights.
+</blockquote>
+
+<h2>The core trick: scale factors</h2>
+
+<p>You can't just round 0.0234 to 0 and -0.891 to -1 and call it done. The trick is: <strong>find the min and max value in a group of weights, then map that range to your available integer buckets.</strong></p>
+
+<pre><code>
+Step 1: Look at a group of weights:  [0.02, -0.45, 0.31, -0.88, 0.15, -0.02, 0.67, -0.33]
+Step 2: Find min = -0.88, max = 0.67
+Step 3: Scale: 0→15 maps to -0.88→0.67
+
+  Int 0  →  -0.88    (min)
+  Int 4  →  -0.49
+  Int 8  →  -0.10
+  Int 12 →   0.29
+  Int 15 →   0.67    (max)
+
+Step 4: Store the 8 weights as 4-bit ints + one FP16 scale factor
+</code></pre>
+
+<p>The key insight: <strong>the scale factor is stored in full precision</strong>. So each <em>group</em> of weights shares one high-precision scale and offset, and the individual weights are just cheap integers relative to that scale. This is called <strong>block-wise</strong> or <strong>group-wise quantization</strong>.</p>
+
+<div class="callout">
+  <div class="callout-title">🧠 Why this works</div>
+  <p>Weights within a small group tend to be in a similar range. A single scale factor can represent them all well. The model trained with those weights already "expects" small variations — a little fuzziness per weight doesn't propagate catastrophically. It's like audio compression: you lose some fidelity, but the song is still recognizable because you kept the overall structure (the scale per block).</p>
+</div>
+
+<h2>Decoding the GGUF suffixes</h2>
+
+<p>When you download models from Hugging Face, you see filenames like <code>Q4_K_M</code>, <code>Q8_0</code>, <code>IQ3_XXS</code>. Here's what they mean:</p>
+
+<table>
+  <tr><th>Suffix</th><th>Bits/weight</th><th>Size (7B model)</th><th>What it does</th></tr>
+  <tr><td><code>F16</code></td><td>16</td><td>~14 GB</td><td>Full half-precision. No quantization. The quality baseline.</td></tr>
+  <tr><td><code>Q8_0</code></td><td>8</td><td>~7 GB</td><td>8-bit with block size 32. Minimal quality loss (1-2%).</td></tr>
+  <tr><td><code>Q6_K</code></td><td>6</td><td>~5.3 GB</td><td>6-bit with K-quant superblock. Very good quality.</td></tr>
+  <tr><td><code>Q5_K_M</code></td><td>5</td><td>~4.5 GB</td><td>5-bit K-quant, medium size. Good balance point.</td></tr>
+  <tr><td><code>Q4_K_M</code></td><td>4</td><td>~3.8 GB</td><td>4-bit K-quant, medium. <strong>The community sweet spot.</strong></td></tr>
+  <tr><td><code>IQ4_XS</code></td><td>4</td><td>~3.5 GB</td><td>4-bit importance-weighted. Smarter than Q4_K_M for some models.</td></tr>
+  <tr><td><code>Q3_K_M</code></td><td>3</td><td>~3.1 GB</td><td>3-bit. Quality loss becomes noticeable for reasoning.</td></tr>
+  <tr><td><code>IQ3_XXS</code></td><td>~3</td><td>~2.9 GB</td><td>Aggressively compressed. Noticeable quality loss on complex tasks.</td></tr>
+  <tr><td><code>Q2_K</code></td><td>2</td><td>~2.5 GB</td><td>Very aggressive. Usable only for simple tasks or tiny models.</td></tr>
+</table>
+
+<h3>What do the letters mean?</h3>
+
+<table>
+  <tr><th>Letter</th><th>Meaning</th></tr>
+  <tr><td><code>Q</code></td><td>Traditional linear quantization (evenly-spaced buckets)</td></tr>
+  <tr><td><code>IQ</code></td><td><strong>Importance-weighted</strong> quantization. Smarter: gives more precision to important weights. Usually better than Q at the same bit-width.</td></tr>
+  <tr><td><code>K</code></td><td><strong>K-quant</strong>: uses different block sizes for different layer types (attention gets different treatment than FFN)</td></tr>
+  <tr><td><code>_0</code></td><td>Legacy format, fixed block size (usually 32)</td></tr>
+  <tr><td><code>_S / _M / _L</code></td><td>Small / Medium / Large. Controls how many weights get higher precision within the mix. Larger = more weights at higher bits = bigger file but better quality.</td></tr>
+  <tr><td><code>_XS / _XXS</code></td><td>Extra-small variants (IQ only). Even more aggressive compression.</td></tr>
+</table>
+
+<h2>What happens to accuracy?</h2>
+
+<p>Not all layers degrade equally when quantized. The pattern:</p>
+
+<table>
+  <tr><th>Layer type</th><th>Sensitivity to quantization</th><th>Why</th></tr>
+  <tr><td>Feed-forward (FFN)</td><td>🟢 Low</td><td>Massive redundancy. You can cut precision aggressively before quality drops.</td></tr>
+  <tr><td>Attention (Q/K/V)</td><td>🟡 Medium</td><td>Precision matters for comparing token similarities. Q4_K still works well though.</td></tr>
+  <tr><td>Embedding / Output</td><td>🔴 High</td><td>These define the token space. Errors here directly affect which words the model can distinguish.</td></tr>
+</table>
+
+<p>This is why <strong>K-quants</strong> exist — they give more bits to sensitive layers and fewer to FFN layers. A <code>Q4_K_M</code> might use 6-bit for attention, 4-bit for FFN, and 6-bit for embeddings, averaging to ~4.6 bits overall.</p>
+
+<div class="callout">
+  <div class="callout-title">📊 Real-world quality loss estimates</div>
+  <table>
+    <tr><th>Quant</th><th>Perplexity increase</th><th>Reasoning quality</th><th>Best for</th></tr>
+    <tr><td>Q8_0</td><td>~0.01-0.02</td><td>Nearly identical</td><td>When you have the RAM and want safety</td></tr>
+    <tr><td>Q6_K</td><td>~0.03-0.05</td><td>Very slight degradation</td><td>High-quality local inference on 16 GB GPUs</td></tr>
+    <tr><td>Q4_K_M</td><td>~0.05-0.15</td><td>Minor degradation — subtle reasoning can suffer</td><td>General-purpose; fits most consumer GPUs</td></tr>
+    <tr><td>Q3_K_M</td><td>~0.15-0.40</td><td>Noticeable on complex chains of thought</td><td>When you really need to save RAM</td></tr>
+    <tr><td>IQ3_XXS</td><td>~0.30-0.60</td><td>Significant degradation on reasoning</td><td>Memory-constrained edge cases</td></tr>
+  </table>
+  <p><em>Perplexity = how "surprised" the model is by text. Lower = better. These are approximate; actual values vary by base model and domain.</em></p>
+</div>
+
+<h2>Your decision framework</h2>
+
+<p>Given your mission — running local models for agentic/thinking tasks — here's the heuristic:</p>
+
+<pre><code>
+If RAM ≥ model_size × 2.5:
+    → Use Q8_0 or FP16. Don't think about it.
+
+If RAM ≥ model_size × 1.8:
+    → Use Q6_K. Tiny quality hit, big memory win.
+
+If RAM ≥ model_size × 1.3:
+    → Use Q4_K_M. The pragmatic default. Most people stop here.
+
+If RAM is tight:
+    → Try IQ4_XS first (smarter than Q4_K_M at same size)
+    → Fall back to Q3_K_M only if you must
+    → Avoid Q2/IQ2 for reasoning — the quality cliff is real
+
+For agentic/general-purpose reasoning tasks:
+    → Q8_0 or Q6_K is ideal (your Deep-SWE benchmarks confirm this)
+    → Q4_K_M is acceptable for most things but expect subtle misses
+    → Below Q4, reasoning degrades measurably
+</code></pre>
+
+<div class="callout">
+  <div class="callout-title">🔗 What's next?</div>
+  <p>In <a href="0003-quantization-in-practice.html">Lesson 3: Quantization in Practice</a> we'll look at your actual setup — oMLX, the models you run, and how to benchmark quant choices systematically instead of guessing.</p>
+</div>
+
+<h2>Quiz: Test yourself</h2>
+
+<div class="quiz" id="quiz1">
+  <div class="quiz-question">Q1. Why does quantization work at all? What's the key trick that makes 4-bit weights usable?</div>
+  <button class="quiz-option" data-correct="false">The model was trained with 4-bit weights from the start</button>
+  <button class="quiz-option" data-correct="false">Only unimportant layers are quantized; critical ones stay at FP16</button>
+  <button class="quiz-option" data-correct="true">Block-wise scaling: each group of weights shares a high-precision scale factor</button>
+  <button class="quiz-option" data-correct="false">The weights are averaged together and stored as a single value</button>
+  <div class="quiz-feedback" id="quiz1-feedback"></div>
+</div>
+
+<div class="quiz" id="quiz2">
+  <div class="quiz-question">Q2. What does the "K" in Q4_K_M stand for?</div>
+  <button class="quiz-option" data-correct="false">Kilobyte — it's measured in 1024-weight blocks</button>
+  <button class="quiz-option" data-correct="true">K-quant: uses different quantization strategies per layer type</button>
+  <button class="quiz-option" data-correct="false">Kernel — optimised for GPU kernel fusion</button>
+  <button class="quiz-option" data-correct="false">Knowledge — trained with knowledge distillation</button>
+  <div class="quiz-feedback" id="quiz2-feedback"></div>
+</div>
+
+<div class="quiz" id="quiz3">
+  <div class="quiz-question">Q3. Which layers are MOST sensitive to quantization — where mistakes hurt the most?</div>
+  <button class="quiz-option" data-correct="false">Feed-forward layers — they hold most of the parameters</button>
+  <button class="quiz-option" data-correct="false">Attention layers — they compare token similarities</button>
+  <button class="quiz-option" data-correct="true">Embedding and output layers — they define the token space itself</button>
+  <button class="quiz-option" data-correct="false">All layers are equally sensitive — it's uniform</button>
+  <div class="quiz-feedback" id="quiz3-feedback"></div>
+</div>
+
+<h2>Dig deeper</h2>
+
+<ul>
+  <li>📖 <strong>Read:</strong> <a href="https://mljourney.com/quantized-llms-explained-q4-vs-q8-vs-fp16/">Quantized LLMs Explained: Q4 vs Q8 vs FP16</a> (ML Journey)</li>
+  <li>📖 <strong>Read:</strong> <a href="https://medium.com/@paul.ilvez/demystifying-llm-quantization-suffixes-what-q4-k-m-q8-0-and-q6-k-really-mean-0ec2770f17d3">Demystifying GGUF Suffixes</a> (Paul Ilvez)</li>
+  <li>📄 <strong>Reference:</strong> <a href="../reference/quantization-formats.html">Quantization Formats Reference</a> — the cheat sheet</li>
+</ul>
+
+<div class="lesson-footer">
+  <p><a href="0001-tensors-and-layers.html">← Lesson 1: Tensors &amp; Layers</a> · Lesson 2 of the LLM Internals series</p>
+  <p><em>Questions? Ask your agent teacher. I can explain any of this in detail or show you concrete examples from your own models.</em></p>
+</div>
+
+<script>
+// Quiz logic
+document.querySelectorAll('.quiz').forEach(quiz => {
+  const feedback = quiz.querySelector('.quiz-feedback');
+  quiz.querySelectorAll('.quiz-option').forEach(btn => {
+    btn.addEventListener('click', () => {
+      quiz.querySelectorAll('.quiz-option').forEach(b => {
+        b.classList.remove('correct', 'incorrect');
+        b.disabled = true;
+      });
+      const isCorrect = btn.dataset.correct === 'true';
+      btn.classList.add(isCorrect ? 'correct' : 'incorrect');
+      feedback.textContent = isCorrect
+        ? '✅ Correct!'
+        : '❌ Not quite — the correct answer is highlighted in green.';
+    });
+  });
+});
+</script>
+
+</body>
+</html>

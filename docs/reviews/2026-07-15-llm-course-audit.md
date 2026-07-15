@@ -1,6 +1,6 @@
 # LLM Internals course review
 
-**Baseline:** repository commit `ee8d240`  
+**Baseline:** repository commit `ee8d240`<br>
 **Implementation plan:** [`../plans/2026-07-15-apply-llm-course-review-improvements.md`](../plans/2026-07-15-apply-llm-course-review-improvements.md)
 
 ## Executive verdict

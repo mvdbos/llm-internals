@@ -19,7 +19,8 @@
 - Baseline state: clean working tree
 - Public course rule: do not expose provider/model names, personal setup details, local paths, prompts, private patches, or raw trajectories.
 - Evidence rule: mechanism, implementation detail, empirical observation, and hypothesis must be labeled separately.
-- Backend rule: GGUF/llama.cpp labels must never be applied to MLX/oMLX artifacts.
+- Foundation-portability rule: Lessons 1 and 2 must teach implementation-independent concepts without relying on product, container, framework, backend, or runtime names in their instructional spine, worked examples, exercises, quizzes, or takeaways. Architecture-specific mechanisms must be labeled as such. Lesson 2 may end with one short named-ecosystem preview whose only purpose is to show that real implementations map the shared mechanics differently; it must not teach format details or make recommendations.
+- Ecosystem-naming rule: distinguish checkpoint/model, artifact/container, quantization scheme, inference engine/runtime, and kernels/hardware. GGUF is a container/artifact format, not a runtime. GGUF/llama.cpp labels must never be applied to MLX/oMLX artifacts, and runtime compatibility claims must be versioned.
 - Experimental rule: do not restore the 57%/thought-duplication claim. Publish a new result only after the exact-model matched-data gate passes.
 - Draft-state rule: immediately mark the current `0003-quantization-in-practice.html` as draft and keep it out of the recommended learner path until the comparison is designed, preregistered, executed, analyzed, and the lesson is rewritten.
 - “Q8” naming rule: use `Q8_0` only for the exact GGUF/llama.cpp format; the current local default is MLX affine 8-bit with group size 64 and must be named accordingly.
@@ -398,6 +399,7 @@ Add explicit rules for:
 - first-occurrence-only links and exact footer parity;
 - mechanism/implementation/evidence/hypothesis labels;
 - backend/quantization-scope identification;
+- the Lessons 1–2 foundation-portability boundary, including the single permitted end-of-Lesson-2 ecosystem preview;
 - source revision and model scope on numerical tables;
 - public anonymization;
 - equal-length quiz options and immediate explanatory feedback;
@@ -659,7 +661,7 @@ Include:
 
 ### Task 17: Rewrite Lesson 1 around the complete dataflow
 
-**Objective:** Remove prerequisite gaps before quantization is introduced.
+**Objective:** Remove prerequisite gaps before quantization is introduced while keeping the foundation independent of any artifact format, framework, backend, or runtime.
 
 **Files:**
 - Modify: `lessons/0001-tensors-and-layers.html`
@@ -674,6 +676,8 @@ Teach in this order:
 6. Three numeric domains: learned weights, activations, retained state/cache.
 7. What weight-only quantization changes and does not change.
 
+Use neutral terms such as `model artifact`, `inference engine`, `numeric format`, and `retained runtime state`. Do not use GGUF, MLX/oMLX, llama.cpp, vLLM, SGLang, or production quantization labels as explanatory examples. Present a KV cache as one retained-state mechanism used by conventional attention, not as a universal property of every LLM; name the existence of recurrent, state-space, linear-attention, and hybrid alternatives without detouring into their implementations.
+
 Replace “all intelligence lives in weights; no lookup table” with bounded language: learned behavior is primarily encoded in parameters, including the embedding lookup, while observed behavior also depends on architecture, tokenizer, prompt, decoding, and external context/tools.
 
 Add:
@@ -684,7 +688,7 @@ Add:
 - citations beside claims;
 - accurate duration and navigation.
 
-**Verification:** learner can answer “what is stored, what flows, and what is cached?” without reading Lesson 2.
+**Verification:** learner can answer “what is stored, what flows, and what is retained between decoding steps?” without reading Lesson 2; the instructional content contains no ecosystem-specific artifact, framework, backend, runtime, or quantization-scheme names.
 
 **Commit:** `docs: rebuild lesson one around model dataflow`
 
@@ -692,7 +696,7 @@ Add:
 
 ### Task 18: Rewrite Lesson 2 as quantization mechanics only
 
-**Objective:** Preserve the strong numerical example while correcting its mathematics and reducing cognitive load.
+**Objective:** Preserve the strong numerical example while correcting its mathematics, reducing cognitive load, and teaching a portable mechanism rather than one ecosystem's encoding.
 
 **Files:**
 - Modify: `lessons/0002-how-quantization-works.html`
@@ -701,7 +705,7 @@ Required flow:
 
 1. FP16/bf16 are floating-point formats with nonuniform spacing; do not describe FP16 as 65,536 linear values in any range.
 2. Symmetric and affine parameterizations taught separately.
-3. A named toy scheme with 8–16 values, explicit encode/store/decode/error calculation.
+3. A clearly labeled pedagogical toy scheme with 8–16 values and an explicit encode/store/decode/error calculation; do not present it as any production format.
 4. Block/group metadata and effective bpw.
 5. Smaller groups versus metadata overhead and outliers.
 6. Dot-product error:
@@ -711,9 +715,11 @@ Required flow:
    Explain why errors can partly cancel and why outliers/sensitive directions still matter.
 7. Production formats differ from the toy scheme.
 
-Move all backend labels, perplexity, agentic guidance, case-study claims, and decision matrices out of this lesson.
+Use `4-bit` and `8-bit` only as code widths inside the named toy scheme, never as complete production-format identities or quality levels. Move all production labels, decoder rings, block-layout details, perplexity, agentic guidance, case-study claims, compatibility claims, and decision matrices out of this lesson.
 
-**Verification:** one lesson, one mechanism, one complete calculation, no GGUF decoder ring.
+End with one brief callout titled **“The same mechanics, different implementations”**. It may name GGUF/llama.cpp `Q8_0`, MLX affine 8-bit, vLLM, and SGLang only to establish that containers, schemes, frameworks, and runtimes are different categories and do not implement an undefined “8-bit” identically. Keep the callout to one short paragraph or compact taxonomy row, make no quality or compatibility recommendation, and link directly to Lesson 3 for the implementation details.
+
+**Verification:** one lesson, one portable mechanism, one complete calculation, and no production ecosystem term outside the single closing preview or its Lesson 3 link. The preview contains no size, quality, speed, support, or compatibility claim and no GGUF decoder ring.
 
 **Commit:** `docs: focus lesson two on correct quantization mechanics`
 
@@ -728,14 +734,16 @@ Move all backend labels, perplexity, agentic guidance, case-study claims, and de
 
 Required flow:
 
-1. Start with the backend identification question.
-2. Decompose a GGUF example into container, underlying tensor type, file recipe, and measured effective bpw.
-3. Decompose an MLX example into mode, group size, dtype, and quantized target.
-4. Contrast `Q8_0` with MLX affine 8-bit explicitly.
-5. Explain K superblocks versus `_S/_M/_L` mixture recipes.
-6. Explain IQ without “important weights receive extra bits.”
-7. Show why implementation version and architecture matter.
-8. End with an artifact-inspection exercise using two anonymized config snippets.
+1. Begin with a taxonomy that separates checkpoint/model, artifact/container, quantization scheme, inference engine/runtime, and kernels/hardware.
+2. Classify GGUF as a container/artifact, MLX as a framework/ecosystem, and llama.cpp, vLLM, and SGLang as inference engines/runtimes; state that exact format and quantization support is version-dependent.
+3. Start artifact inspection with the backend/runtime identification question.
+4. Decompose a GGUF example into container, underlying tensor type, file recipe, and measured effective bpw.
+5. Decompose an MLX example into mode, group size, dtype, and quantized target.
+6. Contrast `Q8_0` with MLX affine 8-bit explicitly.
+7. Explain K superblocks versus `_S/_M/_L` mixture recipes.
+8. Explain IQ without “important weights receive extra bits.”
+9. Show why implementation version and architecture matter; do not add an unversioned cross-runtime compatibility matrix.
+10. End with an artifact-inspection exercise using two anonymized config snippets.
 
 **Verification:** the correct quiz answer depends on config fields, not the word “8-bit.”
 

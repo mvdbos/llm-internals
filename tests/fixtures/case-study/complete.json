@@ -1,0 +1,24 @@
+{
+  "study": {
+    "checkpoint_alias": "dense-27b",
+    "architecture": "dense-hybrid",
+    "engine_alias": "omlx-0.5.1",
+    "conditions": {
+      "bf16": {"scheme_alias": "bf16-weights"},
+      "mlx-affine-int8-g64": {"scheme_alias": "mlx-affine-int8-g64"}
+    },
+    "task_aliases": ["task-01", "task-02"],
+    "repetitions": [1]
+  },
+  "trials": [
+    {"checkpoint_alias":"dense-27b","architecture":"dense-hybrid","engine_alias":"omlx-0.5.1","precision_alias":"bf16","scheme_alias":"bf16-weights","task_alias":"task-01","repetition":1,"attempt_status":"valid","verifier_status":"complete","reward":1,"f2p":0.80,"p2p":1.00,"steps":100,"input_tokens":1000,"output_tokens":500,"elapsed_seconds":1000,"peak_context_tokens":12000,"thought_duplication":0.4},
+    {"checkpoint_alias":"dense-27b","architecture":"dense-hybrid","engine_alias":"omlx-0.5.1","precision_alias":"mlx-affine-int8-g64","scheme_alias":"mlx-affine-int8-g64","task_alias":"task-01","repetition":1,"attempt_status":"valid","verifier_status":"complete","reward":0,"f2p":0.70,"p2p":0.90,"steps":110,"input_tokens":1100,"output_tokens":550,"elapsed_seconds":1200,"peak_context_tokens":13000,"thought_duplication":0.2},
+    {"checkpoint_alias":"dense-27b","architecture":"dense-hybrid","engine_alias":"omlx-0.5.1","precision_alias":"bf16","scheme_alias":"bf16-weights","task_alias":"task-02","repetition":1,"attempt_status":"valid","verifier_status":"complete","reward":0,"f2p":0.60,"p2p":0.90,"steps":80,"input_tokens":900,"output_tokens":400,"elapsed_seconds":900,"peak_context_tokens":10000},
+    {"checkpoint_alias":"dense-27b","architecture":"dense-hybrid","engine_alias":"omlx-0.5.1","precision_alias":"mlx-affine-int8-g64","scheme_alias":"mlx-affine-int8-g64","task_alias":"task-02","repetition":1,"attempt_status":"valid","verifier_status":"complete","reward":1,"f2p":0.65,"p2p":0.95,"steps":70,"input_tokens":850,"output_tokens":380,"elapsed_seconds":850,"peak_context_tokens":9800},
+
+    {"checkpoint_alias":"moe-35b","architecture":"moe-hybrid","engine_alias":"omlx-0.5.1","precision_alias":"bf16","scheme_alias":"bf16-weights","task_alias":"task-01","repetition":1,"attempt_status":"valid","verifier_status":"complete","reward":1,"f2p":1.0,"p2p":1.0,"steps":10,"input_tokens":10,"output_tokens":10,"elapsed_seconds":10},
+    {"checkpoint_alias":"dense-27b","architecture":"dense-hybrid","engine_alias":"other-engine","precision_alias":"bf16","scheme_alias":"bf16-weights","task_alias":"task-01","repetition":1,"attempt_status":"valid","verifier_status":"complete","reward":1,"f2p":1.0,"p2p":1.0,"steps":10,"input_tokens":10,"output_tokens":10,"elapsed_seconds":10},
+    {"checkpoint_alias":"dense-27b","architecture":"dense-hybrid","engine_alias":"omlx-0.5.1","precision_alias":"bf16","scheme_alias":"different-bf16-scheme","task_alias":"task-01","repetition":1,"attempt_status":"valid","verifier_status":"complete","reward":1,"f2p":1.0,"p2p":1.0,"steps":10,"input_tokens":10,"output_tokens":10,"elapsed_seconds":10},
+    {"checkpoint_alias":"dense-27b","architecture":"dense-hybrid","engine_alias":"omlx-0.5.1","precision_alias":"bf16","scheme_alias":"bf16-weights","task_alias":"task-99","repetition":1,"attempt_status":"valid","verifier_status":"complete","reward":1,"f2p":1.0,"p2p":1.0,"steps":10,"input_tokens":10,"output_tokens":10,"elapsed_seconds":10}
+  ]
+}

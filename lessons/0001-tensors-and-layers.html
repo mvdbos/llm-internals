@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="Learn what tensors and layers are inside an LLM — the building-block concepts you need before tackling quantization.">
-<title>Lesson 1: Tensors &amp; Layers — The LEGO Bricks of LLMs</title>
+<title>Lesson 1: Tensors &amp; Layers — The Building Blocks of LLMs</title>
 <link rel="stylesheet" href="../assets/style.css">
 </head>
 <body>
@@ -12,13 +12,11 @@
 <main>
 <p class="lesson-progress">Lesson 1 of 4 published · ~5 min</p>
 <h1>Lesson 1: Tensors &amp; Layers</h1>
-<p><em>The LEGO bricks that make an LLM tick.</em></p>
+<p><em>The building blocks of an LLM — what tensors and layers actually are.</em></p>
 
 <h2>What's a tensor?</h2>
 
-<p>A <a href="../reference/glossary.html#tensor" class="glossary-link">tensor</a> is just a grid of numbers. Nothing scarier than that.</p>
-
-<p>You already know tensors, even if nobody called them that:</p>
+<p>A <a href="../reference/glossary.html#tensor" class="glossary-link">tensor</a> is a grid of numbers. You already know them by other names:</p>
 
 <table>
   <caption>From a single number to a cube of numbers — they're all tensors</caption>
@@ -55,9 +53,7 @@
 
 <p>In practice, ML people call <em>everything</em> a tensor — scalars, vectors, matrices, all of it. The word just means "numbers flowing through the model."</p>
 
-<blockquote>
-  <strong>ELI5 version:</strong> Imagine a factory conveyor belt. Each item on the belt is a tray with little compartments holding numbers. That tray is a tensor. The model moves trays from station to station, and each station changes the numbers in some way.
-</blockquote>
+<p>Think of it like a factory conveyor belt. Each item on the belt is a tray with compartments holding numbers — that tray is a tensor. The model moves trays from station to station, and each station transforms the numbers in some way.</p>
 
 <h2>What's a layer?</h2>
 
@@ -104,12 +100,12 @@ Words → [Embedding layer] → [Layer 1] → [Layer 2] → ... → [Layer N] �
   <tr>
     <td><a href="../reference/glossary.html#transformer" class="glossary-link">Transformer</a> layers</td>
     <td>The bulk of the model. Each layer mixes information between words and transforms the representations. A 7B model might have 32 of these.</td>
-    <td>32 rounds of "think about this word in context of all the other words"</td>
+    <td>32 rounds of mixing information between words to build up context</td>
   </tr>
   <tr>
     <td><a href="../reference/glossary.html#output-layer" class="glossary-link">Output layer</a></td>
     <td>Converts the final tensor back into a probability for each possible next word</td>
-    <td>After all that thinking: "the next word is probably 'sat' (followed by 'on', 'the', 'mat')"</td>
+    <td>After all the processing: "the next word is probably 'sat'"</td>
   </tr>
   </tbody>
 </table>

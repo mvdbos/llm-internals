@@ -8,34 +8,100 @@
 <link rel="stylesheet" href="../assets/style.css">
 </head>
 <body>
-<nav class="course-nav" aria-label="Lesson navigation"><a href="0001-tensors-and-layers.html">← Previous: Runtime state</a><a href="../index.html">Course home</a><a href="0003-reading-quantization-formats.html">Next: Formats and runtimes →</a></nav>
+<nav class="course-nav" aria-label="Lesson navigation"><a href="0001-tensors-and-layers.html">← Previous: Tensors &amp; Layers</a><a href="../index.html">Course home</a><a href="0003-reading-quantization-formats.html">Next: Formats and runtimes →</a></nav>
 <main>
 <p class="lesson-progress">Lesson 2 of 4 published · ~15 min</p>
 <h1>Lesson 2: How Quantization Actually Works</h1>
-<p><a href="../reference/glossary.html#quantization" class="glossary-link">Quantization</a> is not “make every number less accurate.” It is a specified round trip: map selected real-valued numbers to a restricted set of codes, store those codes plus reconstruction metadata, then reconstruct or compute with approximations during inference.</p>
+<p>Every <a href="../reference/glossary.html#weight" class="glossary-link">weight</a> in an LLM is stored as a number. At <a href="../reference/glossary.html#fp16" class="glossary-link">FP16</a>, each number uses <strong>16 bits</strong> (2 bytes). <a href="../reference/glossary.html#quantization" class="glossary-link">Quantization</a> asks: what if we stored each weight in <strong>fewer bits</strong>?</p>
 
-<h2>1. Start with the numeric format and target</h2>
-<p><a href="../reference/glossary.html#fp16" class="glossary-link">FP16</a> and <a href="../reference/glossary.html#bf16" class="glossary-link">bf16</a> both use 16 stored bits, but they are floating-point formats—not 65,536 linearly spaced values across one range. Their sign, exponent, and significand fields make representable values dense near zero and farther apart at larger magnitudes. FP16 allocates more significand bits and fewer exponent bits; bf16 allocates fewer significand bits and more exponent bits, so they trade local precision and numeric range differently.</p>
-<p>Quantization can change weights, activations, retained state, or another tensor. The <a href="../reference/glossary.html#quantized-target" class="glossary-link">quantized target</a> matters because each role has different values, lifetimes, and error paths. A weight-only conversion does not automatically quantize temporary activations or retained state.</p>
-<p>For every comparison, record:</p>
+<table>
+  <caption>Fewer bits means fewer distinct values — the fundamental tradeoff</caption>
+  <thead>
+  <tr><th scope="col">Format</th><th scope="col">Bits per weight</th><th scope="col">Distinct values</th><th scope="col">Analogy</th></tr>
+  </thead>
+  <tbody>
+  <tr><td>FP16</td><td>16</td><td>65,536 (in any range)</td><td>Measuring to the millimetre</td></tr>
+  <tr><td>Q8 (8-bit)</td><td>8</td><td>256</td><td>Measuring to the centimetre</td></tr>
+  <tr><td>Q4 (4-bit)</td><td>4</td><td>16</td><td>Measuring to the nearest 10 cm</td></tr>
+  <tr><td>Q2 (2-bit)</td><td>2</td><td>4</td><td>Measuring to the nearest half-metre</td></tr>
+  </tbody>
+</table>
+
+<p>Think of it like a photo. The original has millions of colours (FP16). Convert to 256 colours (Q8) — it looks almost the same. Convert to 16 colours (Q4) — slightly posterised but still recognisable. Convert to 4 colours (Q2) — barely recognisable. Quantization is the same tradeoff for model weights.</p>
+
+<h2>1. The core idea: block-wise scaling</h2>
+
+<p>You can't just round 0.0234 to 0 and −0.891 to −1 and call it done. That would destroy the weights. Instead, quantization groups weights into blocks and stores a shared <a href="../reference/glossary.html#scale-factor" class="glossary-link">scale factor</a> and <a href="../reference/glossary.html#offset" class="glossary-link">offset</a> for each block:</p>
+
+<pre><code>original ≈ scale × quantized_value + offset</code></pre>
+
+<p>Where:</p>
 <ul>
-<li>which tensor values are encoded;</li>
-<li>the numeric mode and code width;</li>
-<li>how values are grouped;</li>
-<li>which reconstruction metadata is stored;</li>
-<li>which tensors or operations are exceptions;</li>
-<li>whether calibration or importance information influenced the encoding.</li>
+  <li><strong>quantized_value</strong> = a small integer (0–15 for 4-bit, 0–255 for 8-bit)</li>
+  <li><strong>scale</strong> = a single FP16 number that sets the spacing between levels (e.g. 0.1033)</li>
+  <li><strong>offset</strong> = aligns the integer grid to the data (sometimes implemented via a <a href="../reference/glossary.html#zero-point" class="glossary-link">zero point</a>)</li>
 </ul>
 
-<h2>2. The portable encode-store-decode loop</h2>
-<div class="pipeline" aria-label="Quantization round trip">
-<div class="pipeline-step"><strong>Choose a group</strong><br>A declared slice of values shares metadata</div>
-<div class="pipeline-step"><strong>Fit a mapping</strong><br>Select a <a href="../reference/glossary.html#scale-factor" class="glossary-link">scale</a>, <a href="../reference/glossary.html#offset" class="glossary-link">offset</a>, codebook, or other parameters from the group's values under the declared scheme</div>
-<div class="pipeline-step"><strong>Encode</strong><br>Map each original value to a restricted code</div>
-<div class="pipeline-step"><strong>Store</strong><br>Save codes plus all required metadata</div>
-<div class="pipeline-step"><strong>Reconstruct or compute</strong><br>Use approximate values during an operation</div>
-</div>
-<p>A scale factor sets the spacing between representable levels in many mappings. An <a href="../reference/glossary.html#affine-quantization" class="glossary-link">affine mapping</a> also uses an offset or <a href="../reference/glossary.html#zero-point" class="glossary-link">zero point</a>. Codebook-based or floating encodings use different metadata. “Low-bit” describes the codes, not the complete storage or arithmetic.</p>
+<p>The scale and offset stay in full precision. Only the integers are cheap. Store 32 weights as 4-bit integers plus one FP16 scale and one FP16 offset:</p>
+
+<pre><code>Storage: 32 × 4 bits  +  16 bits  +  16 bits  =  160 bits  =  5.0 bits/weight</code></pre>
+
+<p>That's still 3.2× smaller than the original 16 bits/weight. With 128-weight blocks you approach 4.25 bits/weight — the overhead shrinks as blocks get larger. This is why <a href="../reference/glossary.html#effective-bits-per-weight" class="glossary-link">effective bits per weight</a> is usually higher than the nominal code width.</p>
+
+<h3>A concrete walkthrough</h3>
+
+<p>One weight through the encode–decode cycle:</p>
+
+<pre><code>Original weight: 0.31
+Group range: min = −0.88, max = 0.67
+Total span: 0.67 − (−0.88) = 1.55
+
+Scale = 1.55 ÷ 15 = 0.1033 per level
+Offset = −0.88
+
+Encoding: 0.31 → integer
+  int = round((0.31 − offset) ÷ scale) = round(1.19 ÷ 0.1033) = round(11.5)
+  → stored as int 12
+
+Decoding: int 12 → float
+  value = scale × 12 + offset = 1.240 + (−0.88) = 0.36
+
+Error: 0.36 − 0.31 = 0.05 (off by 5 hundredths)</code></pre>
+
+<p>A single weight is off by 0.05. That might seem like a lot — but the model has billions of weights, each carrying a tiny bit of redundant information. A small per-weight error doesn't catastrophically change the output; it adds a faint layer of noise. The model is robust to this because it learned to be during training (through techniques like dropout and weight decay).</p>
+
+<h2>2. Why blocks? Why not one scale per layer?</h2>
+
+<p>If scale factors are the trick, why not use them differently? There are only three options:</p>
+
+<table>
+  <caption>The three possible scaling strategies — only one works well</caption>
+  <thead>
+  <tr><th scope="col">Strategy</th><th scope="col">Compression</th><th scope="col">Accuracy</th><th scope="col">Verdict</th></tr>
+  </thead>
+  <tbody>
+  <tr>
+    <td>One scale per weight</td>
+    <td>None — the scale is FP16, so you're back to 16 bits per weight</td>
+    <td>Perfect</td>
+    <td>Pointless</td>
+  </tr>
+  <tr>
+    <td>One scale per layer</td>
+    <td>Maximum — one scale for millions of weights</td>
+    <td>Terrible — weights in a layer span very different ranges; one scale can't capture both ends well</td>
+    <td>Too coarse</td>
+  </tr>
+  <tr>
+    <td>One scale per block (e.g. 32 weights)</td>
+    <td>Good — scale overhead is small relative to the weight savings</td>
+    <td>Good — 32 neighbouring weights usually live in a similar range</td>
+    <td><strong>The sweet spot</strong></td>
+  </tr>
+  </tbody>
+</table>
+
+<p>Block size is a tunable parameter. A smaller <a href="../reference/glossary.html#group-size" class="glossary-link">group size</a> adapts more closely to local value ranges, reducing reconstruction error — but it repeats metadata more often. A larger group amortises metadata over more values but can force outliers and small values to share one coarse mapping. The next sections make this precise.</p>
 
 <h2>3. One complete two-bit affine round trip</h2>
 <p>Consider one group containing eight real values:</p>
@@ -73,8 +139,8 @@ reconstruct(q) = minimum + q × scale</code></pre>
 + scale/offset/codebook metadata
 + alignment and tensor metadata
 + any values kept in another format</code></pre>
-<p>A smaller <a href="../reference/glossary.html#group-size" class="glossary-link">group size</a> can adapt more closely to local value ranges, often reducing reconstruction error, but it repeats metadata more often. A larger group amortizes metadata over more values but can force outliers and small values to share one coarse mapping.</p>
-<p>That is why <a href="../reference/glossary.html#effective-bits-per-weight" class="glossary-link">effective bits per weight</a> can be higher than the nominal code width. The relevant calculation counts codes, metadata, and exceptions under one explicit accounting rule.</p>
+<p>A smaller group size can adapt more closely to local value ranges, often reducing reconstruction error, but it repeats metadata more often. A larger group amortizes metadata over more values but can force outliers and small values to share one coarse mapping.</p>
+<p>That is why effective bits per weight can be higher than the nominal code width. The relevant calculation counts codes, metadata, and exceptions under one explicit accounting rule.</p>
 <p>Storage accounting also records the data type of each component: packed-code storage, scale dtype, offset/bias or zero-point dtype, codebook dtype, and the dtypes of any unquantized exceptions. Two groups with the same nominal code width can therefore have different effective storage.</p>
 
 <h2>5. Compare mapping families</h2>
@@ -99,7 +165,7 @@ q     = clip(round(x ÷ scale), −q_max, q_max)
 x_hat = scale × q</code></pre>
 <p>Zero reconstructs exactly, while an asymmetric group may leave part of the code range poorly used.</p>
 <h3>Affine parameterization</h3>
-<p>An affine mapping shifts the grid with a zero point <code>z</code> (or an algebraically equivalent offset):</p>
+<p>An <a href="../reference/glossary.html#affine-quantization" class="glossary-link">affine mapping</a> shifts the grid with a zero point <code>z</code> (or an algebraically equivalent offset):</p>
 <pre><code>q     = clip(round(x ÷ scale) + z, q_min, q_max)
 x_hat = scale × (q − z)</code></pre>
 <p>The scale controls spacing; the zero point controls alignment. They are distinct parameters. The toy calculation above writes the same idea using the group's minimum as an explicit reconstruction offset.</p>
@@ -169,9 +235,9 @@ x_hat = scale × (q − z)</code></pre>
 <li><a href="../reference/quantization-decision-checklist.html">Five-step decision checklist</a></li>
 <li><a href="0003-reading-quantization-formats.html">Lesson 3: Reading Quantization Formats</a></li>
 </ul>
-<div class="terms-footer"><p><strong>Terms in this lesson:</strong> <a href="../reference/glossary.html#fp16">FP16</a> · <a href="../reference/glossary.html#bf16">bf16</a> · <a href="../reference/glossary.html#quantization">Quantization</a> · <a href="../reference/glossary.html#quantized-target">Quantized target</a> · <a href="../reference/glossary.html#offset">Offset</a> · <a href="../reference/glossary.html#scale-factor">Scale factor</a> · <a href="../reference/glossary.html#affine-quantization">Affine quantization</a> · <a href="../reference/glossary.html#zero-point">Zero point</a> · <a href="../reference/glossary.html#group-size">Group size</a> · <a href="../reference/glossary.html#effective-bits-per-weight">Effective bits per weight</a> · <a href="../reference/glossary.html#symmetric-quantization">Symmetric quantization</a></p></div>
+<div class="terms-footer"><p><strong>Terms in this lesson:</strong> <a href="../reference/glossary.html#weight">Weight</a> · <a href="../reference/glossary.html#fp16">FP16</a> · <a href="../reference/glossary.html#quantization">Quantization</a> · <a href="../reference/glossary.html#scale-factor">Scale factor</a> · <a href="../reference/glossary.html#offset">Offset</a> · <a href="../reference/glossary.html#zero-point">Zero point</a> · <a href="../reference/glossary.html#effective-bits-per-weight">Effective bits per weight</a> · <a href="../reference/glossary.html#group-size">Group size</a> · <a href="../reference/glossary.html#affine-quantization">Affine quantization</a> · <a href="../reference/glossary.html#symmetric-quantization">Symmetric quantization</a></p></div>
 </main>
-<nav class="course-nav" aria-label="Lesson navigation"><a href="0001-tensors-and-layers.html">← Previous: Runtime state</a><a href="../index.html">Course home</a><a href="0003-reading-quantization-formats.html">Next: Formats and runtimes →</a></nav>
+<nav class="course-nav" aria-label="Lesson navigation"><a href="0001-tensors-and-layers.html">← Previous: Tensors &amp; Layers</a><a href="../index.html">Course home</a><a href="0003-reading-quantization-formats.html">Next: Formats and runtimes →</a></nav>
 <script src="../assets/quiz.js" defer></script>
 </body>
 </html>

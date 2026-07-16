@@ -1,27 +1,15 @@
 # Mission
 
-**Understand LLM internals well enough to make scoped, evidence-backed quantization decisions for local inference.**
+**I want to understand LLM internals well enough to make smart quantization choices when running local models.**
 
-## Public learner objective
+## Primary goal
 
-The course should let a learner:
+When I see model options like `Q4_K_M`, `Q8_0`, `IQ3_XXS`, or `bf16`, I want to know what these actually mean — not just a rule of thumb, but the *why*. What trade-off am I making? When is 4-bit perfectly fine, and when is it hurting me?
 
-1. distinguish learned parameters, temporary activations, and architecture-specific retained runtime state;
-2. explain quantization as a numeric encode/store/decode process rather than a magic compression knob;
-3. separate checkpoints, artifacts, encodings, model-file recipes, inference engines, backends, kernels, and hardware;
-4. calculate explicit weight/cache estimates and verify the measured runtime boundary;
-5. design a matched workload evaluation and choose among measured Pareto points without relying on universal quality rules.
+## Secondary goal
 
-## Private project context
+To get there, I need the prerequisite knowledge: what tensors and layers actually are inside an LLM. Not at a researcher level, but deep enough that quantization isn't just a magic compression knob.
 
-Regular local-model use motivated the original course. Earlier local artifacts suggested that model choice, precision, runtime configuration, and agent behavior might interact, but those observations were not a controlled quantization study. They used unmatched tasks and repetitions, included architecture and configuration differences, and did not justify a causal claim that quantization degraded reasoning.
+## Context
 
-That uncertainty is now part of the method rather than the teaching conclusion: define the exact scheme and target, control the comparison, measure task-valid outcomes, and state what remains unknown.
-
-## Evidence and publication boundary
-
-- Canonical facts are pinned to source revisions.
-- Numerical examples are labeled as sourced observations or pedagogical calculations.
-- Historical and pilot observations cannot become recommendations.
-- The controlled comparison is preregistered but its execution is deferred.
-- The final capstone and result-dependent recommendation remain unpublished until the paired evidence gate passes.
+I run local models regularly and have seen that quantization can affect output quality in subtle ways. I want to understand *why* that happens, so I can make better model choices without blind benchmarking every time.

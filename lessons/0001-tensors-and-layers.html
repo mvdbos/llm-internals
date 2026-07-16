@@ -3,146 +3,191 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Learn how text becomes model output and separate parameters, activations, retained state, and runtime memory.">
-<title>Lesson 1: Tensors, Parameters, and Runtime State</title>
+<meta name="description" content="Learn what tensors and layers are inside an LLM — the building-block concepts you need before tackling quantization.">
+<title>Lesson 1: Tensors &amp; Layers — The LEGO Bricks of LLMs</title>
 <link rel="stylesheet" href="../assets/style.css">
 </head>
 <body>
 <nav class="course-nav" aria-label="Lesson navigation"><a href="../index.html">← Course home</a><a href="0002-how-quantization-works.html">Next: Quantization mechanics →</a></nav>
 <main>
-<p class="lesson-progress">Lesson 1 of 4 published · ~14 min</p>
-<h1>Lesson 1: Tensors, Parameters, and Runtime State</h1>
-<p>A language model is not one giant table of facts. It is a computation that moves shaped arrays of numbers through a sequence of operations. To reason about memory, first separate the numbers stored before a run from the numbers created during a run.</p>
+<p class="lesson-progress">Lesson 1 of 4 published · ~5 min</p>
+<h1>Lesson 1: Tensors &amp; Layers</h1>
+<p><em>The LEGO bricks that make an LLM tick.</em></p>
 
-<h2>1. A tensor has shape, data type, and role</h2>
-<p>A <a href="../reference/glossary.html#tensor" class="glossary-link">tensor</a> is a multidimensional array. Rank describes how many axes it has; shape gives the length of each axis; data type describes how each value is represented. None of those tells you the tensor's role.</p>
-<div class="table-scroll" role="region" aria-label="Tensor roles" tabindex="0">
-<p class="scroll-hint">Scroll horizontally to compare the roles.</p>
+<h2>What's a tensor?</h2>
+
+<p>A <a href="../reference/glossary.html#tensor" class="glossary-link">tensor</a> is just a grid of numbers. Nothing scarier than that.</p>
+
+<p>You already know tensors, even if nobody called them that:</p>
+
 <table>
-<caption>The same tensor rank can appear in three different memory roles</caption>
-<thead><tr><th scope="col">Role</th><th scope="col">When it exists</th><th scope="col">Example</th><th scope="col">What changes its size</th></tr></thead>
-<tbody>
-<tr><th scope="row">Learned parameter</th><td>Saved before inference and loaded for a run</td><td>A projection matrix</td><td>Architecture, checkpoint, stored encoding</td></tr>
-<tr><th scope="row">Temporary activation</th><td>Created while an operation runs, then usually released or reused</td><td>A hidden representation or intermediate product</td><td>Batch, sequence length, architecture, execution plan, data type</td></tr>
-<tr><th scope="row">Retained state</th><td>Kept across generation steps</td><td>Previously computed key/value vectors in conventional cached attention</td><td>Architecture, batch, retained length, data type, cache strategy</td></tr>
-</tbody>
+  <caption>From a single number to a cube of numbers — they're all tensors</caption>
+  <thead>
+  <tr><th scope="col">Dimension</th><th scope="col">Name</th><th scope="col">What it looks like</th><th scope="col">Example</th></tr>
+  </thead>
+  <tbody>
+  <tr>
+    <td>0D</td>
+    <td><a href="../reference/glossary.html#scalar" class="glossary-link">Scalar</a></td>
+    <td>A single number</td>
+    <td><code>42</code></td>
+  </tr>
+  <tr>
+    <td>1D</td>
+    <td><a href="../reference/glossary.html#vector" class="glossary-link">Vector</a></td>
+    <td>A row of numbers</td>
+    <td><code>[0.2, 0.8, -0.5]</code></td>
+  </tr>
+  <tr>
+    <td>2D</td>
+    <td><a href="../reference/glossary.html#matrix" class="glossary-link">Matrix</a></td>
+    <td>A table of numbers</td>
+    <td>A spreadsheet grid</td>
+  </tr>
+  <tr>
+    <td>3D+</td>
+    <td>Tensor</td>
+    <td>A cube (or more) of numbers</td>
+    <td>A stack of spreadsheets</td>
+  </tr>
+  </tbody>
 </table>
-</div>
-<p>A <a href="../reference/glossary.html#parameter" class="glossary-link">parameter</a> is a learned value in a checkpoint. An <a href="../reference/glossary.html#activation" class="glossary-link">activation</a> is produced by executing the model. <a href="../reference/glossary.html#retained-runtime-state" class="glossary-link">Retained runtime state</a> is the subset of runtime values deliberately kept for later generation steps. Calling all three “the model” hides the memory boundary that matters.</p>
 
-<h2>2. What is stored, and what runs?</h2>
-<p>A <a href="../reference/glossary.html#artifact" class="glossary-link">model artifact</a> stores parameter tensors and metadata. An <a href="../reference/glossary.html#inference-engine" class="glossary-link">inference engine</a> reads that artifact, allocates working memory, executes the architecture, and applies a decoding rule. Artifact size is therefore not the same as peak runtime memory.</p>
-<div class="pipeline" aria-label="Stored and runtime quantities">
-<div class="pipeline-step"><strong>Before the run</strong><br>Checkpoint-derived parameter tensors and metadata</div>
-<div class="pipeline-step"><strong>Loaded</strong><br>Parameters are mapped, copied, aligned, or unpacked as required</div>
-<div class="pipeline-step"><strong>During the run</strong><br>Activations, retained state, and workspaces are allocated</div>
-<div class="pipeline-step"><strong>Measured peak</strong><br>All allocations inside the declared boundary</div>
-</div>
+<p>In practice, ML people call <em>everything</em> a tensor — scalars, vectors, matrices, all of it. The word just means "numbers flowing through the model."</p>
 
-<h2>3. Follow one next-token step without skipping stages</h2>
-<p><strong>Architecture scope:</strong> the following trace is a conventional decoder-only, Transformer-style model. It is a useful concrete example, not a claim that every language model uses full self-attention or a KV cache.</p>
+<blockquote>
+  <strong>ELI5 version:</strong> Imagine a factory conveyor belt. Each item on the belt is a tray with little compartments holding numbers. That tray is a tensor. The model moves trays from station to station, and each station changes the numbers in some way.
+</blockquote>
+
+<h2>What's a layer?</h2>
+
+<p>A <a href="../reference/glossary.html#layer" class="glossary-link">layer</a> is one of those stations. It takes a tensor in, does math to it, and spits a (usually different) tensor out.</p>
+
+<pre><code>Input tensor  →  [ Layer: math operations ]  →  Output tensor</code></pre>
+
+<p>What math? Mostly two things:</p>
+
 <ol>
-<li><strong>Text becomes IDs.</strong> A tokenizer maps text into <a href="../reference/glossary.html#token" class="glossary-link">token</a> IDs. The exact mapping belongs to the checkpoint/tokenizer revision.</li>
-<li><strong>IDs become vectors.</strong> An <a href="../reference/glossary.html#embedding-layer" class="glossary-link">embedding layer</a> looks up one learned vector per token ID. For a deliberately tiny example, suppose the selected embedding is <code>e = [1, −2]</code> with shape <code>(2,)</code>. A learned projection <code>W</code> has shape <code>(3, 2)</code>:
-<pre><code>W = [[ 0.50,  0.25],
-     [-1.00,  0.50],
-     [ 2.00, -0.50]]
-
-W × e = [0.50×1 + 0.25×(−2),
-         −1.00×1 + 0.50×(−2),
-          2.00×1 − 0.50×(−2)]
-      = [0, −2, 3]                 shape (3,)</code></pre>
-The matrix's second dimension must match the vector's only dimension; its first dimension determines the output length.</li>
-<li><strong>Vectors become contextual representations.</strong> Repeated blocks transform the <a href="../reference/glossary.html#hidden-state" class="glossary-link">hidden state</a>. A conventional block combines normalization—for example, <a href="../reference/glossary.html#rmsnorm" class="glossary-link">RMSNorm</a> in some architectures—causal <a href="../reference/glossary.html#attention" class="glossary-link">attention</a>, residual paths, and a position-wise <a href="../reference/glossary.html#feed-forward-network-ffn" class="glossary-link">feed-forward network</a>. Exact order, normalization variant, dimensions, gating, and attention pattern are architecture-specific (<a href="../resources.html#canonical">canonical architecture sources</a>).</li>
-<li><strong>Representations become scores.</strong> An output projection produces <a href="../reference/glossary.html#logits" class="glossary-link">logits</a>, one raw score per vocabulary item for the next position.</li>
-<li><strong>A decoding rule selects an ID.</strong> Greedy choice, sampling, constraints, or another rule chooses the next token. The tokenizer decodes IDs back to text.</li>
-<li><strong>The next step reuses state.</strong> Conventional cached attention appends new key/value vectors and reuses old vectors. It does not store attention scores as the cache and does not normally rewrite every old entry.</li>
-</ol>
-<p><strong>Toy round trip:</strong> text <code>"blue"</code> is mapped by a fictional tokenizer to ID <code>17</code>; ID 17 selects an embedding; projections and repeated blocks transform it with the preceding context; the final vector produces vocabulary logits; a decoding rule selects ID <code>42</code>; and the same fictional tokenizer maps ID 42 to <code>" sky"</code>. Real models use much larger vectors and many blocks, but every arrow names a distinct object rather than skipping from text directly to an answer.</p>
-
-<h2>4. Architecture labels change the memory formula</h2>
-<div class="table-scroll" role="region" aria-label="Architecture-specific retained state" tabindex="0">
-<p class="scroll-hint">Scroll horizontally to compare retained-state families.</p>
-<table>
-<caption>Do not apply a conventional KV-cache formula to every architecture</caption>
-<thead><tr><th scope="col">Architecture label</th><th scope="col">Possible retained state</th><th scope="col">Question to answer</th></tr></thead>
-<tbody>
-<tr><th scope="row">Conventional cached attention</th><td>Keys and values per retained KV head, layer, and position</td><td>How many KV heads, layers, positions, and bytes per element?</td></tr>
-<tr><th scope="row">Grouped- or multi-query attention</th><td>Fewer retained KV heads than query heads</td><td>Did the calculation use KV-head count rather than query-head count?</td></tr>
-<tr><th scope="row">Windowed/hybrid attention</th><td>Different retained lengths or mechanisms by layer</td><td>Which layers retain a window, global tokens, or full history?</td></tr>
-<tr><th scope="row">Recurrent, state-space, or linear-attention path</th><td>Architecture-specific recurrent or summary state</td><td>What state tensors does this architecture actually retain?</td></tr>
-</tbody>
-</table>
-</div>
-<p>The safe habit is simple: name the architecture family, read the configuration, then write the formula. Do not start with “two bytes per parameter plus some cache.”</p>
-
-<h2>5. Static memory and context-dependent memory</h2>
-<p><a href="../reference/glossary.html#static-memory" class="glossary-link">Static memory</a> is the loaded parameter allocation under a stated loading policy. <a href="../reference/glossary.html#runtime-memory" class="glossary-link">Runtime memory</a> also includes retained state, temporary activations/workspaces, and runtime overhead.</p>
-<pre><code>peak runtime memory
-≈ loaded parameter allocation
-+ architecture-specific retained state
-+ temporary activations and workspaces
-+ runtime/allocator overhead</code></pre>
-<p>Loaded parameter memory is mostly independent of prompt length. Retained state and many temporary allocations are not. Increasing batch size, retained sequence length, or generation strategy can change the peak even when the artifact is unchanged.</p>
-
-<h3>Worked separation</h3>
-<p>Suppose two runs load the same parameter tensors. Run B processes a longer retained sequence than Run A. If B uses more memory, that does not mean its parameter tensors grew; the context-dependent part changed. To diagnose it:</p>
-<ol>
-<li>measure loaded idle memory;</li>
-<li>record batch, prompt length, generated length, and cache/state data type;</li>
-<li>measure peak generation memory;</li>
-<li>attribute the difference only after checking retained state, workspaces, and allocator behavior.</li>
+  <li><strong>Multiply</strong> the input numbers by a set of stored numbers called <em><a href="../reference/glossary.html#weight" class="glossary-link">weights</a></em></li>
+  <li><strong>Add</strong> some more stored numbers called <em><a href="../reference/glossary.html#bias" class="glossary-link">biases</a></em></li>
 </ol>
 
-<h2>6. What weight-only quantization changes</h2>
-<p>In a weight-only conversion, the <a href="../reference/glossary.html#quantized-target" class="glossary-link">quantized target</a> is selected learned parameter tensors in the artifact. Their stored numeric representation and reconstruction metadata change. The tokenizer, architecture graph, prompt, decoding rule, temporary activation format, and retained-state format do not change merely because the weights changed; any of those would require a separate configuration decision. Learned behavior is primarily encoded in parameters—including the embedding lookup—but observed behavior also depends on architecture, tokenizer, prompt, decoding, and external context or tools.</p>
+<p>The <strong>weights</strong> are the "knowledge" of the layer — they're what the model learned during training. When you download an LLM, you're downloading billions of these weight numbers.</p>
 
-<div class="callout"><div class="callout-title">Decision-procedure checkpoint</div><p>You can now perform the memory half of step 2: separate loaded parameters from architecture-appropriate retained state and headroom. Lesson 2 shows how a restricted numeric encoding changes selected values; later lessons add implementation and workload evidence.</p></div>
+<div class="callout">
+  <div class="callout-title">🧠 Key insight</div>
+  <p>The entire "intelligence" of an LLM lives in its weights. There's no database, no lookup table, no magic — just billions of carefully tuned numbers that, when multiplied and added together in the right sequence, produce coherent text.</p>
+</div>
 
-<h2>Quiz: identify the memory role</h2>
+<h2>How layers stack into an LLM</h2>
+
+<p>An LLM is a <strong>stack of layers</strong>. Like this:</p>
+
+<pre><code>
+Words → [Embedding layer] → [Layer 1] → [Layer 2] → ... → [Layer N] → [Output layer] → Next word
+         (words→numbers)     (transformer blocks — the "thinking")      (numbers→word predictions)
+</code></pre>
+
+<p>Let's break each part down:</p>
+
+<table>
+  <caption>The three kinds of layers in a typical LLM</caption>
+  <thead>
+  <tr><th scope="col">Part</th><th scope="col">What it does</th><th scope="col">ELI5</th></tr>
+  </thead>
+  <tbody>
+  <tr>
+    <td><a href="../reference/glossary.html#embedding-layer" class="glossary-link">Embedding layer</a></td>
+    <td>Converts each word into a tensor (a vector of ~4096 or ~8192 numbers)</td>
+    <td>Turns "cat" into a fingerprint of numbers that captures what "cat" means</td>
+  </tr>
+  <tr>
+    <td><a href="../reference/glossary.html#transformer" class="glossary-link">Transformer</a> layers</td>
+    <td>The bulk of the model. Each layer mixes information between words and transforms the representations. A 7B model might have 32 of these.</td>
+    <td>32 rounds of "think about this word in context of all the other words"</td>
+  </tr>
+  <tr>
+    <td><a href="../reference/glossary.html#output-layer" class="glossary-link">Output layer</a></td>
+    <td>Converts the final tensor back into a probability for each possible next word</td>
+    <td>After all that thinking: "the next word is probably 'sat' (followed by 'on', 'the', 'mat')"</td>
+  </tr>
+  </tbody>
+</table>
+
+<h2>Why this matters for quantization</h2>
+
+<p>Every one of those layers stores its <strong>weights as numbers</strong> — floating-point numbers that take up 16 or 32 bits each. In a 7 billion <a href="../reference/glossary.html#parameter" class="glossary-link">parameter</a> model:</p>
+
+<ul>
+  <li>At <strong>16-bit</strong> (<a href="../reference/glossary.html#fp16" class="glossary-link">FP16</a>): 7B × 2 bytes = <strong>14 GB</strong></li>
+  <li>At <strong>4-bit</strong> (Q4): 7B × 0.5 bytes = <strong>3.5 GB</strong></li>
+</ul>
+
+<p><a href="../reference/glossary.html#quantization" class="glossary-link">Quantization</a> compresses those weight numbers — from 16 bits down to 8 bits, 4 bits, or even lower. The tradeoff: fewer bits = less memory, but each weight is <em>slightly fuzzier</em>. Some layers care more about precision than others. That's what we'll explore next.</p>
+
+<div class="callout">
+  <div class="callout-title">🔗 What's next?</div>
+  <p>In <a href="0002-how-quantization-works.html">Lesson 2: How Quantization Works</a> we'll see exactly what happens when you shrink 16 bits into 4 bits, and why it usually works better than you'd expect.</p>
+</div>
+
+<h2>Quiz: Test yourself</h2>
+
 <fieldset class="quiz-question" data-quiz data-retry="true" id="quiz1">
-<legend>1. Which statement correctly distinguishes a parameter from an activation?</legend>
-<button type="button" class="quiz-option" data-correct="false" data-explanation="Sequence length can change activation sizes, but it does not redefine activations as saved checkpoint values.">Both are saved in the model artifact, but activations use fewer bits.</button>
-<button type="button" class="quiz-option" data-correct="true" data-explanation="Parameters are learned values saved in the checkpoint; activations are values created when operations execute.">A parameter is saved before the run; an activation is created during the run.</button>
-<button type="button" class="quiz-option" data-correct="false" data-explanation="Retained state is a third role; it can persist across steps without becoming a learned parameter.">A parameter persists across steps; every activation is immediately discarded.</button>
+<legend>1. In an LLM, where does the "knowledge" actually live?</legend>
+<button type="button" class="quiz-option" data-correct="false" data-explanation="The embedding layer turns words into numbers, but the knowledge of how to use those numbers is distributed across all the layers' weights.">In the embedding layer — that's where words get their meaning.</button>
+<button type="button" class="quiz-option" data-correct="false" data-explanation="The output layer just converts the final representation into word probabilities; it doesn't store the bulk of what the model knows.">In the output layer — that's where word predictions are made.</button>
+<button type="button" class="quiz-option" data-correct="true" data-explanation="Weights are stored in every layer, and together they encode everything the model learned during training.">In the weights spread across all the layers.</button>
+<button type="button" class="quiz-option" data-correct="false" data-explanation="An LLM has no separate database or fact store — all its knowledge is encoded in the weight numbers themselves.">In a separate database the model references during inference.</button>
 <p class="quiz-feedback" role="status" tabindex="-1"></p>
 <button type="button" class="quiz-reset" hidden>Try again</button>
 </fieldset>
 
 <fieldset class="quiz-question" data-quiz data-retry="true" id="quiz2">
-<legend>2. A conventional grouped-query model retains fewer KV heads than query heads. Which count belongs in its KV-memory estimate?</legend>
-<button type="button" class="quiz-option" data-correct="true" data-explanation="The cache stores keys and values, so the retained KV-head count—not the query-head count—sets this dimension.">Use the retained KV-head count from the architecture configuration.</button>
-<button type="button" class="quiz-option" data-correct="false" data-explanation="Query heads can outnumber retained KV heads, so this would overestimate the cache for grouped-query attention.">Use the query-head count because every query needs its own cache.</button>
-<button type="button" class="quiz-option" data-correct="false" data-explanation="Parameter count does not determine the KV-head dimension of retained runtime state.">Use total parameter count divided by the number of layers.</button>
+<legend>2. A 7B parameter model at 16-bit uses roughly 14 GB. About how much at 4-bit?</legend>
+<button type="button" class="quiz-option" data-correct="false" data-explanation="4-bit uses a quarter of the bits of 16-bit, so it uses roughly a quarter of the memory, not half.">~7 GB (half).</button>
+<button type="button" class="quiz-option" data-correct="true" data-explanation="4 bits is one quarter of 16 bits, so 14 GB ÷ 4 ≈ 3.5 GB.">~3.5 GB (a quarter).</button>
+<button type="button" class="quiz-option" data-correct="false" data-explanation="4-bit compression is more aggressive than this — 1.75 GB would be 2-bit territory.">~1.75 GB (an eighth).</button>
+<button type="button" class="quiz-option" data-correct="false" data-explanation="4-bit quantization is a well-established technique — it really does compress to roughly a quarter of the 16-bit size.">~10 GB — you can't compress that much.</button>
 <p class="quiz-feedback" role="status" tabindex="-1"></p>
 <button type="button" class="quiz-reset" hidden>Try again</button>
 </fieldset>
 
 <fieldset class="quiz-question" data-quiz data-retry="true" id="quiz3">
-<legend>3. Why can peak memory rise when the artifact and loaded parameters stay unchanged?</legend>
-<button type="button" class="quiz-option" data-correct="false" data-explanation="Saved parameter values do not gain precision merely because more context is processed.">The engine silently increases every parameter's numeric precision.</button>
-<button type="button" class="quiz-option" data-correct="false" data-explanation="Artifact bytes on disk do not grow as a consequence of processing one longer prompt.">The artifact expands on disk to store every processed token.</button>
-<button type="button" class="quiz-option" data-correct="true" data-explanation="Retained state, activations, workspaces, and allocator behavior can all depend on the workload.">Context-dependent state and workspaces can grow during the run.</button>
+<legend>3. What is a tensor, in the simplest terms?</legend>
+<button type="button" class="quiz-option" data-correct="false" data-explanation="A tensor is a data structure, not a hardware instruction — GPUs have separate instructions that operate on tensors.">A special kind of GPU instruction.</button>
+<button type="button" class="quiz-option" data-correct="false" data-explanation="A tensor is a container for numbers, not a proof about model behavior.">A mathematical proof that the model converges.</button>
+<button type="button" class="quiz-option" data-correct="true" data-explanation="At its core, a tensor is a multidimensional array — a grid of numbers that flows through the model's operations.">A grid of numbers flowing through the model.</button>
+<button type="button" class="quiz-option" data-correct="false" data-explanation="Model files contain tensors, but the tensor itself is the grid of numbers, not the file format.">The file format models are saved in.</button>
 <p class="quiz-feedback" role="status" tabindex="-1"></p>
 <button type="button" class="quiz-reset" hidden>Try again</button>
 </fieldset>
 
-<fieldset class="quiz-question" data-quiz data-retry="true" id="quiz4">
-<legend>4. A conversion changes only the stored numeric representation of selected projection matrices. Which object was quantized?</legend>
-<button type="button" class="quiz-option" data-correct="true" data-explanation="Projection matrices are learned parameter tensors. A weight-only conversion changes their stored representation without automatically changing runtime activations or retained state.">Selected learned parameter tensors in the artifact.</button>
-<button type="button" class="quiz-option" data-correct="false" data-explanation="Activations are created while operations execute; the scenario explicitly changed stored projection matrices instead.">Every temporary activation created during inference.</button>
-<button type="button" class="quiz-option" data-correct="false" data-explanation="Retained state is configured separately; changing stored projection matrices does not automatically change its format.">The architecture's retained runtime state.</button>
-<p class="quiz-feedback" role="status" tabindex="-1"></p>
-<button type="button" class="quiz-reset" hidden>Try again</button>
-</fieldset>
+<h2>Dig deeper</h2>
 
-<h2>References and next step</h2>
 <ul>
-<li><a href="../reference/tensors-and-layers.html">Tensors, dataflow, and runtime-state reference</a></li>
-<li><a href="../resources.html#canonical">Canonical Transformer and cache sources</a></li>
-<li><a href="../reference/quantization-decision-checklist.html">Five-step decision checklist</a></li>
+  <li>📺 <strong>Watch:</strong> <a href="https://www.youtube.com/watch?v=wjZofJX0v4M">3Blue1Brown: Transformers (Deep Learning Ch. 5)</a> — visual tour of how data flows through layers</li>
+  <li>📖 <strong>Read:</strong> <a href="https://jalammar.github.io/illustrated-transformer/">The Illustrated Transformer</a> by Jay Alammar</li>
+  <li>📄 <strong>Reference:</strong> <a href="../reference/tensors-and-layers.html">Tensors &amp; Layers Reference</a> — the cheat sheet version</li>
 </ul>
-<div class="terms-footer"><p><strong>Terms in this lesson:</strong> <a href="../reference/glossary.html#tensor">Tensor</a> · <a href="../reference/glossary.html#parameter">Parameter</a> · <a href="../reference/glossary.html#activation">Activation</a> · <a href="../reference/glossary.html#retained-runtime-state">Retained runtime state</a> · <a href="../reference/glossary.html#artifact">Model artifact</a> · <a href="../reference/glossary.html#inference-engine">Inference engine</a> · <a href="../reference/glossary.html#token">Token</a> · <a href="../reference/glossary.html#embedding-layer">Embedding layer</a> · <a href="../reference/glossary.html#hidden-state">Hidden state</a> · <a href="../reference/glossary.html#rmsnorm">RMSNorm</a> · <a href="../reference/glossary.html#attention">Attention</a> · <a href="../reference/glossary.html#feed-forward-network-ffn">Feed-forward network</a> · <a href="../reference/glossary.html#logits">Logits</a> · <a href="../reference/glossary.html#static-memory">Static memory</a> · <a href="../reference/glossary.html#runtime-memory">Runtime memory</a> · <a href="../reference/glossary.html#quantized-target">Quantized target</a></p></div>
+
+<div class="terms-footer">
+  <p><strong>📖 Terms in this lesson:</strong>
+    <a href="../reference/glossary.html#tensor">Tensor</a> ·
+    <a href="../reference/glossary.html#scalar">Scalar</a> ·
+    <a href="../reference/glossary.html#vector">Vector</a> ·
+    <a href="../reference/glossary.html#matrix">Matrix</a> ·
+    <a href="../reference/glossary.html#layer">Layer</a> ·
+    <a href="../reference/glossary.html#weight">Weight</a> ·
+    <a href="../reference/glossary.html#bias">Bias</a> ·
+    <a href="../reference/glossary.html#embedding-layer">Embedding layer</a> ·
+    <a href="../reference/glossary.html#transformer">Transformer</a> ·
+    <a href="../reference/glossary.html#output-layer">Output layer</a> ·
+    <a href="../reference/glossary.html#parameter">Parameter</a> ·
+    <a href="../reference/glossary.html#fp16">FP16</a> ·
+    <a href="../reference/glossary.html#quantization">Quantization</a>
+  </p>
+</div>
+
 </main>
 <nav class="course-nav" aria-label="Lesson navigation"><a href="../index.html">← Course home</a><a href="0002-how-quantization-works.html">Next: Quantization mechanics →</a></nav>
 <script src="../assets/quiz.js" defer></script>

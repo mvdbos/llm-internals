@@ -3,33 +3,29 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="The learner objective and evidence standard for the LLM Internals for Quantization Decisions course.">
+<meta name="description" content="The learner objective for the LLM Internals for Quantization Decisions course.">
 <title>Mission — LLM Internals for Quantization Decisions</title>
 <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
-<div class="page-shell">
 <nav class="course-nav" aria-label="Breadcrumb"><a href="index.html">← Course home</a><a href="resources.html">Evidence ledger</a></nav>
 <main>
 <h1>Mission</h1>
-<p><strong>Learn enough about model dataflow, numeric representation, runtime state, and evaluation to make a scoped, evidence-backed quantization decision.</strong></p>
 
-<h2>What learners will be able to do</h2>
-<ol>
-<li>Distinguish learned parameters, temporary activations, and architecture-specific retained runtime state.</li>
-<li>Explain a quantization round trip—including mapping, metadata, reconstruction, and error—without treating a bit width as a complete format.</li>
-<li>Classify checkpoints, artifacts, tensor encodings, recipes, inference engines, backends, kernels, and hardware before comparing candidates.</li>
-<li>Calculate weight and retained-state estimates with explicit units, then verify the real memory boundary.</li>
-<li>Design a matched workload evaluation and choose among measured Pareto points without inventing a universal ranking.</li>
-</ol>
+<p><strong>I want to understand LLM internals well enough to make smart quantization choices when running local models.</strong></p>
 
-<h2>Evidence standard</h2>
-<p>The course separates canonical implementation facts, measured observations, pedagogical examples, and causal hypotheses. A format suffix, file size, perplexity change, or step count does not by itself establish downstream quality. Quantitative claims name their model/artifact scope, revision, metric, and measurement boundary.</p>
+<h2>Primary goal</h2>
 
-<h2>Current publication boundary</h2>
-<p>Lessons 1–4 and the reference material teach the independent foundations and evaluation method. The final decision capstone and controlled-comparison results are deferred until the preregistered paired trials are resumed and pass their evidence gate. The course does not substitute historical or pilot observations for those results.</p>
+<p>When I see model options like <code>Q4_K_M</code>, <code>Q8_0</code>, <code>IQ3_XXS</code>, or <code>bf16</code>, I want to know what these actually mean — not just a rule of thumb, but the <em>why</em>. What trade-off am I making? When is 4-bit perfectly fine, and when is it hurting me?</p>
+
+<h2>Secondary goal</h2>
+
+<p>To get there, I need the prerequisite knowledge: what tensors and layers actually are inside an LLM. Not at a researcher level, but deep enough that quantization isn't just a magic compression knob.</p>
+
+<h2>Context</h2>
+
+<p>I run local models regularly and have seen that quantization can affect output quality in subtle ways. I want to understand <em>why</em> that happens, so I can make better model choices without blind benchmarking every time.</p>
 </main>
-<nav class="course-nav" aria-label="Footer"><a href="index.html">← Course home</a><a href="lessons/0001-tensors-and-layers.html">Start Lesson 1</a><a href="reference/quantization-decision-checklist.html">Decision checklist</a></nav>
-</div>
+<nav class="course-nav" aria-label="Footer"><a href="index.html">← Course home</a><a href="lessons/0001-tensors-and-layers.html">Start Lesson 1</a></nav>
 </body>
 </html>

@@ -2,35 +2,21 @@
 
 **Date:** 2026-07-13
 **Lesson:** [0002-how-quantization-works.html](../lessons/0002-how-quantization-works.html)
+**Status:** superseded by the 2026 course audit
 
-## Revision status
+This generalized record preserves corrections from the original lesson without personal setup, provider, model, or benchmark details. It is not current evidence; the revised lesson and pinned implementation sources are authoritative.
 
-Superseded by the 2026 course audit. These notes preserve the original learning state but must not be treated as current evidence. Reassessment is required after the revised lesson.
+## Corrections carried forward
 
-Retracted or uncertain claims in the preserved notes:
+- Quantization does not universally mean mapping FP16 weights to integers with one FP16 scale. Targets, mappings, group size, code width, metadata dtypes, and exceptions are separate choices.
+- GGUF, GGML tensor labels, llama.cpp recipes, MLX modes, and oMLX oQ recipes belong to distinct artifact/runtime ecosystems and are not portable synonyms.
+- Suffixes and broad quality labels do not guarantee one tensor-by-tensor recipe or a universal quality ranking.
+- No universal tensor-sensitivity hierarchy, task-sensitivity ranking, or fixed attention/embedding/FFN precision recipe is assumed.
+- Unmatched historical artifacts cannot establish a causal effect of quantization.
 
-- Quantization does not universally mean FP16 weights mapped to integers with one FP16 scale; targets, mappings, metadata, and exceptions differ.
-- GGUF/GGML/llama.cpp labels are backend-specific implementation concepts, not the portable quantization mechanism.
-- “IQ is smarter,” a universal tensor-sensitivity hierarchy, and a fixed attention/embedding/FFN precision recipe were unsupported generalizations.
-- The “community sweet spot,” creative-versus-agentic sensitivity ranking, and quoted perplexity bands lacked adequate source, model, dataset, and revision scope.
-- Existing Deep-SWE artifacts did not form a matched same-checkpoint comparison and therefore did not establish degradation caused by quantization.
+## Durable concepts
 
-## What was learned
-
-- Quantization maps FP16 weights to lower-bit integers using per-block scale factors
-- The key trick: each group of weights shares one high-precision (FP16) scale factor; individual weights become cheap integers
-- GGUF naming decoded: Q/IQ, bit-width, K-quant, S/M/L size variants
-- Importance-weighted (IQ) quants are smarter than traditional linear (Q) quants at the same bit-width
-- Layer sensitivity varies: embeddings/output > attention > FFN. K-quants exploit this with per-layer-type strategies.
-
-## Key insights
-
-- Q4_K_M (the community sweet spot) uses mixed precision: ~6-bit for attention and embeddings, ~4-bit for FFN
-- For agentic/reasoning tasks, precision matters more than for creative/conversational use — long chains of logic can't absorb fuzzy weights
-- The perplexity increase from Q8_0 is negligible (~0.01-0.02) but Q4_K_M adds ~0.05-0.15 — enough for subtle reasoning misses
-- This explains the Deep-SWE benchmark results: 8-bit quantization degraded agentic SWE performance measurably vs bf16
-
-## Zone of proximal development
-
-- Ready for: practical quant selection for specific models and hardware, benchmarking methodology
-- Next: Lesson 3 — applying this to the actual setup (oMLX, Qwen models, Deep-SWE benchmarks)
+- A quantized representation stores restricted codes plus the metadata needed to reconstruct or compute with approximations.
+- Effective bits per weight count codes, metadata, exceptions, and their data types under one declared accounting boundary.
+- Group size trades metadata overhead against how locally the mapping can fit value ranges.
+- The exact artifact, engine/backend, kernels, hardware, and workload must be identified before comparing memory, speed, or quality.

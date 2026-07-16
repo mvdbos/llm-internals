@@ -38,7 +38,7 @@ dd { margin: .25rem 0 0 1rem; color: #333; }
 <dt id="attention">Attention <span class="aka">self-attention when source and target are the same sequence</span></dt>
 <dd><span class="tag">architecture</span>A mechanism that forms weighted combinations of value vectors using similarities between query and key vectors. Causal self-attention masks future positions. Windowed, grouped-query, multi-query, linear, and hybrid variants do not all have the same compute or retained-state formula.</dd>
 <dt id="attention-head">Attention Head</dt>
-<dd><span class="tag">architecture</span>One set of query/key/value projections and its attention calculation inside multi-head attention. Head count and head dimension are architecture fields, not universal constants.</dd>
+<dd><span class="tag">architecture</span>One query-head partition and its attention calculation. In standard multi-head attention each query head has corresponding key/value heads; in grouped-query or multi-query attention, multiple query heads share fewer key/value heads. Query-head count, KV-head count, and head dimension are separate architecture fields.</dd>
 </dl>
 
 <h2 id="B">B</h2>
@@ -100,7 +100,7 @@ dd { margin: .25rem 0 0 1rem; color: #333; }
 <h2 id="G">G</h2>
 <dl>
 <dt id="gguf">GGUF <span class="aka">GGML Universal File</span></dt>
-<dd><span class="tag">artifact</span>A binary model-artifact format containing metadata and typed tensors. It is associated with the GGML ecosystem but is not itself an inference engine or a synonym for quantization.</dd>
+<dd><span class="tag">artifact</span>A binary model-artifact format containing metadata and typed tensors from the GGML type system. It belongs to the artifact/container layer; it is not an inference engine, a hardware backend, or a synonym for quantization.</dd>
 <dt id="gguf-quantization-levels">GGUF quantization type and model-file recipe labels</dt>
 <dd><span class="tag">quantized target</span>Labels such as <code>Q8_0</code>, <code>Q6_K</code>, and <code>IQ4_XS</code> name concrete GGML tensor encodings. Labels such as <code>Q4_K_M</code> can name a llama.cpp model-file recipe that selects a mixture of tensor encodings. Meanings and effective bpw are version- and model-specific.</dd>
 <dt id="group-size">Group Size</dt>
@@ -194,6 +194,8 @@ dd { margin: .25rem 0 0 1rem; color: #333; }
 <dd><span class="tag">runtime state</span>State kept across generation steps so the engine does not recompute all prior work. A KV cache is one architecture-specific example; recurrent state and state-space state are different.</dd>
 <dt id="reward">Reward</dt>
 <dd><span class="tag">evaluation</span>A scalar outcome defined by a particular evaluator. In strict software-engineering evaluation it may be binary and require every F2P and P2P condition to pass; never infer its definition from the word alone.</dd>
+<dt id="rmsnorm">RMSNorm <span class="aka">Root Mean Square Layer Normalization</span></dt>
+<dd><span class="tag">architecture</span>A normalization operation that rescales a feature vector using its root-mean-square magnitude, typically without subtracting the feature mean. Exact epsilon, learned scale, placement, and dtype are architecture and implementation details; RMSNorm is not interchangeable with LayerNorm.</dd>
 <dt id="runtime-memory">Runtime Memory</dt>
 <dd><span class="tag">measurement</span>Memory allocated while the engine is loaded or generating: parameters, retained state, temporary workspaces, allocator overhead, executable resources, and sometimes duplicated buffers. Report the measurement boundary and whether it is peak or steady state.</dd>
 </dl>

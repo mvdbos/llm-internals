@@ -10,7 +10,7 @@
 <body>
 <nav class="course-nav" aria-label="Lesson navigation"><a href="0001-tensors-and-layers.html">← Previous: Runtime state</a><a href="../index.html">Course home</a><a href="0003-reading-quantization-formats.html">Next: Formats and runtimes →</a></nav>
 <main>
-<p class="lesson-progress">Lesson 2 of 5 · ~15 min</p>
+<p class="lesson-progress">Lesson 2 of 4 published · ~15 min</p>
 <h1>Lesson 2: How Quantization Actually Works</h1>
 <p><a href="../reference/glossary.html#quantization" class="glossary-link">Quantization</a> is not “make every number less accurate.” It is a specified round trip: map selected real-valued numbers to a restricted set of codes, store those codes plus reconstruction metadata, then reconstruct or compute with approximations during inference.</p>
 
@@ -30,7 +30,7 @@
 <h2>2. The portable encode-store-decode loop</h2>
 <div class="pipeline" aria-label="Quantization round trip">
 <div class="pipeline-step"><strong>Choose a group</strong><br>A declared slice of values shares metadata</div>
-<div class="pipeline-step"><strong>Fit a mapping</strong><br>Select a <a href="../reference/glossary.html#scale-factor" class="glossary-link">scale</a>, <a href="../reference/glossary.html#offset" class="glossary-link">offset</a>, codebook, or other parameters</div>
+<div class="pipeline-step"><strong>Fit a mapping</strong><br>Select a <a href="../reference/glossary.html#scale-factor" class="glossary-link">scale</a>, <a href="../reference/glossary.html#offset" class="glossary-link">offset</a>, codebook, or other parameters from the group's values under the declared scheme</div>
 <div class="pipeline-step"><strong>Encode</strong><br>Map each original value to a restricted code</div>
 <div class="pipeline-step"><strong>Store</strong><br>Save codes plus all required metadata</div>
 <div class="pipeline-step"><strong>Reconstruct or compute</strong><br>Use approximate values during an operation</div>
@@ -75,6 +75,7 @@ reconstruct(q) = minimum + q × scale</code></pre>
 + any values kept in another format</code></pre>
 <p>A smaller <a href="../reference/glossary.html#group-size" class="glossary-link">group size</a> can adapt more closely to local value ranges, often reducing reconstruction error, but it repeats metadata more often. A larger group amortizes metadata over more values but can force outliers and small values to share one coarse mapping.</p>
 <p>That is why <a href="../reference/glossary.html#effective-bits-per-weight" class="glossary-link">effective bits per weight</a> can be higher than the nominal code width. The relevant calculation counts codes, metadata, and exceptions under one explicit accounting rule.</p>
+<p>Storage accounting also records the data type of each component: packed-code storage, scale dtype, offset/bias or zero-point dtype, codebook dtype, and the dtypes of any unquantized exceptions. Two groups with the same nominal code width can therefore have different effective storage.</p>
 
 <h2>5. Compare mapping families</h2>
 <div class="table-scroll" role="region" aria-label="Portable mapping families" tabindex="0">

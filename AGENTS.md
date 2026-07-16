@@ -45,16 +45,16 @@ Every numerical or implementation-specific table needs an adjacent caption namin
 
 ## Glossary-linking contract
 
-Every technical term with an entry in `reference/glossary.html` must link its first instructional occurrence per lesson using a term-specific stable slug:
+Every technical term with an entry in `reference/glossary.html` must link its first instructional occurrence per lesson or technical reference page using a term-specific stable slug:
 
 ```html
 <dt id="kv-cache">KV Cache</dt>
 <a href="../reference/glossary.html#kv-cache" class="glossary-link">KV cache</a>
 ```
 
-Letter headings are only for A–Z navigation. Never target them from instructional glossary links. Do not link the same target twice in one lesson, and do not put glossary links inside quiz options or code examples.
+Letter headings are only for A–Z navigation. Never target them from instructional glossary links. Do not link the same target twice on one page, and do not put glossary links inside quiz options or code examples.
 
-At the bottom of every lesson, add a `.terms-footer` whose target set exactly equals the set of inline `.glossary-link` targets—no missing, extra, or duplicate targets.
+At the bottom of every lesson and technical reference page, add a `.terms-footer` whose target set exactly equals the set of inline `.glossary-link` targets—no missing, extra, or duplicate targets.
 
 ## Quizzes
 
@@ -78,17 +78,15 @@ At the bottom of every lesson, add a `.terms-footer` whose target set exactly eq
 
 ## Required checks
 
-Run after every course change:
+Run after every current four-lesson course change:
 
 ```bash
 python3 -m unittest discover -s tests -v
-python3 scripts/audit_course.py
-```
-
-During the temporary five-lesson migration only, planned lessons may be ignored explicitly:
-
-```bash
 python3 scripts/audit_course.py --allow-planned-lessons
 ```
 
-Before release, remove every `status: "planned"` value and run strict mode. Also run `git diff --check` and confirm the worktree contains no private benchmark data.
+The accepted current release has four published lessons and one evidence-gated planned lesson. The explicit flag documents that temporary boundary; it does not waive checks for any published page.
+
+For the current four-lesson release, also run `python3 -m py_compile scripts/audit_course.py scripts/analyze_case_study.py`, `node --check assets/quiz.js`, `git diff --check`, and the commit-range whitespace check; confirm the worktree contains no private benchmark data. Publish directly to `main` and verify the GitHub Pages output; no pull request is required for this repository workflow.
+
+Strict mode remains the future five-lesson gate. Remove `status: "planned"` and require strict audit only after Lesson 5 has passed its evidence gate; never make strict mode green by fabricating the deferred lesson or weakening its navigation contract.

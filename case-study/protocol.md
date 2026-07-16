@@ -1,6 +1,6 @@
 # Preregistered paired quantization protocol
 
-**Protocol version:** 1.0<br>
+**Protocol version:** 1.1<br>
 **Frozen:** 2026-07-15, before new outcome-bearing trials<br>
 **Parent design:** [`experiment-design.md`](experiment-design.md)<br>
 **Status:** blocked pending all preflight gates
@@ -24,9 +24,9 @@ Both conditions use the same pinned oMLX build. The treatment condition is not G
 
 ## Immutable provenance gate
 
-Before smoke execution, the ignored manifest must prove that both artifacts resolve to the same immutable source-checkpoint and tokenizer revision. Matching architecture and tokenizer hashes are necessary but not sufficient. Failure to prove exact source parity stops the experiment.
+Before smoke execution, the ignored manifest must prove that both artifacts resolve to the same immutable source-checkpoint and tokenizer revision. Matching architecture and tokenizer hashes are necessary but not sufficient. Failure to prove exact source parity stops the experiment. The manifest must also include a SHA-256 digest of the API-effective settings snapshot, `parity_status: verified`, and `alias_map_status: verified` before the analyzer can return `ready`.
 
-Public artifacts use only aliases. Exact model/provider IDs, source paths, task IDs, and provenance handles remain in the ignored manifest.
+Public artifacts use only approved lowercase slug aliases. Exact model/provider IDs, source paths, task IDs, and provenance handles remain in complete private condition/task maps inside the ignored manifest. The analyzer validates map completeness and same-source parity but never serializes private map values.
 
 ## Sample and matrix
 
@@ -104,23 +104,32 @@ Quality is analyzed first. Efficiency is never interpreted as an improvement whe
 
 No non-inferiority margin is declared. The study reports estimates and intervals rather than an equivalence verdict.
 
-## Attempt and attrition rules
+## Attempt, verifier, and attrition rules
 
-Every expected cell is classified as one of:
+Every attempt has a positive integer `attempt`, a boolean `selected_for_analysis`, and one `attempt_status`:
 
 1. `completed` — valid model/agent attempt reached normal termination;
 2. `model_agent_timeout` — valid outcome, retained without outcome-motivated rerun;
 3. `model_agent_failure` — valid outcome when infrastructure functioned;
-4. `environment_harness_failure` — no valid model/agent attempt;
-5. `verifier_only_failure` — attempt exists but verifier failed independently.
+4. `environment_harness_failure` — no valid model/agent attempt.
+
+Verifier state is recorded separately as `complete`, `missing`, or `verifier_only_failure`. A verifier failure does not rewrite the attempt's model/agent status.
 
 - Environment/harness failures receive at most one documented, condition-neutral repair/rerun.
 - Verifier-only failures rerun the verifier without inference when the original artifact is intact; otherwise they use the same one-rerun infrastructure rule.
 - Model/agent timeouts and failures remain outcomes.
 - Original failures remain in the attrition table after a successful rerun.
+- Every planned task × repetition × condition cell has exactly one selected attempt. An infrastructure failure cannot be selected; a documented authorized rerun can be selected while the original remains unselected in attrition.
 - No run is excluded for score, steps, token use, latency, repetition, or trajectory appearance.
 - Missing F2P/P2P is never imputed.
 - Discovered artifacts, valid attempts, verifier-covered attempts, and successful completions are reported separately.
+
+## Metric schema
+
+- F2P and P2P are numbers in `[0, 1]` and each carries integer numerator/denominator fields. Denominators are positive, numerators lie between zero and the denominator, and the ratio must equal the reported score.
+- Reward is `0`, `1`, or missing. It is paired independently as a guardrail and never determines whether a verifier-covered F2P/P2P pair exists.
+- Steps, input tokens, output tokens, elapsed seconds, and peak context tokens are non-negative when present.
+- Primary evidence requires a selected valid model/agent attempt, `verifier_status: complete`, and complete F2P/P2P score/count fields in both conditions.
 
 ## Task replacement rule
 
@@ -128,20 +137,21 @@ A task is replaceable only when paired smoke demonstrates a persistent environme
 
 ## Analysis
 
-1. Require unique keys `(checkpoint, architecture, engine, scheme, task alias, repetition, condition)`.
-2. Validate the expected 40-cell matrix.
-3. Pair exact task alias and repetition only.
-4. Compute F2P/P2P paired differences and reward pair states first.
-5. Report every pair and every task-level mean.
-6. Aggregate by equal-weight mean of the five task-level means.
-7. Use task-clustered paired bootstrap uncertainty:
+1. Require unique attempt keys `(checkpoint, architecture, engine, scheme, task alias, repetition, condition, attempt)`.
+2. Require explicit `baseline_condition: bf16` and `treatment_condition: mlx-affine-int8-g64`; never infer delta direction from JSON object order.
+3. Validate the frozen five-task × four-repeat × two-condition matrix, sequential schedule, and exactly one selected attempt per cell.
+4. Pair exact task alias and repetition only.
+5. Compute F2P/P2P paired differences and reward pair states independently, with treatment minus baseline sign.
+6. Report every pair and every task-level mean.
+7. Aggregate by equal-weight mean of the five task-level means.
+8. Use task-clustered paired bootstrap uncertainty:
    - seed `20260715`;
    - 10,000 replicates;
    - resample tasks with replacement and retain their repetitions;
    - report 2.5th and 97.5th percentiles as a descriptive 95% interval.
-8. Report full secondary-outcome distributions before any successful-only view.
-9. Show attrition and primary-metric completeness by condition and task.
-10. Block a causal/universal headline whenever the primary matrix is incomplete.
+9. Report full secondary-outcome distributions by condition before any successful-only view, plus paired task means and intervals.
+10. Show every attempt in attrition and primary-metric completeness by condition and task.
+11. Return `ready` only when provenance, aliases, frozen shape, selected-attempt, verifier, primary, reward-guardrail, and metric-count gates all pass.
 
 The public analyzer is:
 
@@ -167,4 +177,6 @@ No full run or recommendation is permitted until every box is checked.
 
 ## Amendments
 
-None. Any future amendment must include date, rationale, affected fields, and confirmation that no relevant outcomes had been inspected.
+**2026-07-16 — Protocol 1.1.** Clarified the fail-closed manifest/analyzer schema: explicit baseline/treatment roles, immutable provenance evidence, safe alias maps, attempt IDs and selection, separate verifier state, numerator/denominator fields, reward independence, task-clustered intervals, and secondary distributions. No treatment, task, repeat, metric, or outcome-dependent rule changed; no new trial outcomes had been collected.
+
+Any future amendment must include date, rationale, affected fields, and confirmation that no relevant outcomes had been inspected.

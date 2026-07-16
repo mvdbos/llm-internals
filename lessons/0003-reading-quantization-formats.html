@@ -10,7 +10,7 @@
 <body>
 <nav class="course-nav" aria-label="Lesson navigation"><a href="0002-how-quantization-works.html">← Previous: Mechanics</a><a href="../index.html">Course home</a><a href="0004-measuring-quantization-quality.html">Next: Controlled evaluation →</a></nav>
 <main>
-<p class="lesson-progress">Lesson 3 of 5 · ~14 min</p>
+<p class="lesson-progress">Lesson 3 of 4 published · ~14 min</p>
 <h1>Lesson 3: Reading Quantization Formats</h1>
 <p>Lesson 2 gave you implementation-independent mechanics. Real downloads add a naming problem: one short label can refer to an <a href="../reference/glossary.html#artifact" class="glossary-link">artifact</a> type, a tensor encoding, a model-file recipe, or a precision category. This lesson gives each name one job.</p>
 
@@ -38,6 +38,9 @@
 <tr><th scope="row"><code>Q4_K_M</code></th><td>llama.cpp model-file output recipe</td><td>The pinned quantizer selects tensor encodings using tensor and architecture properties plus fallbacks</td><td>“Every tensor is uniform four-bit” or “the suffix defines one universal layer split”</td></tr>
 <tr><th scope="row"><code>IQ4_XS</code></th><td>GGML importance-aware encoding/recipe label</td><td>Uses specialized codebook/metadata and importance-aware quantization procedures</td><td>“The label guarantees better quality for every model and task”</td></tr>
 <tr><th scope="row">MLX affine 8-bit/<a href="../reference/glossary.html#group-size" class="glossary-link">group 64</a></th><td>MLX weight-quantization configuration</td><td>Affine mode, eight-bit codes, groups of 64, packed weights, scales, and biases</td><td>“This is GGML Q8_0” or “activations/cache are also eight-bit”</td></tr>
+<tr><th scope="row">MLX MXFP4/group 32</th><td>MLX quantization mode</td><td>Four-bit floating-point values with E8M0 group scales and no affine bias in the pinned API</td><td>“All MLX four-bit modes are affine”</td></tr>
+<tr><th scope="row">MLX NVFP4/group 16</th><td>MLX quantization mode</td><td>Four-bit floating-point values with E4M3 group scales and no affine bias in the pinned API</td><td>“MXFP4 and NVFP4 are the same layout”</td></tr>
+<tr><th scope="row">Current oMLX oQ4/oQ6</th><td>Versioned mixed-precision oQ recipes</td><td>Affine/group-64 base precision with sensitivity-driven budgeted boosts for eligible non-expert tensors</td><td>“Every tensor is uniformly four- or six-bit”</td></tr>
 <tr><th scope="row">Current oMLX oQ8</th><td>Versioned oQ model recipe</td><td>Current pinned documentation specifies MXFP8 with group size 32</td><td>“oQ8 means affine eight-bit/group 64”</td></tr>
 <tr><th scope="row">MLX</th><td>Array framework and model ecosystem</td><td>Provides quantization APIs, model code, and execution primitives; an MLX artifact records its own configuration</td><td>“MLX is one tensor encoding”</td></tr>
 <tr><th scope="row">llama.cpp</th><td>Inference engine/runtime</td><td>Loads supported artifact and tensor types and dispatches version-specific backend kernels</td><td>“llama.cpp is another name for GGUF”</td></tr>
@@ -46,6 +49,7 @@
 </table>
 </div>
 <p><strong>Implementation source scope:</strong> the GGUF/GGML/llama.cpp rows are pinned to GGML commit <code>af97976c…</code> and llama.cpp commit <code>3b532193…</code>; MLX is pinned to v0.32.0/<code>7a1d4f5c…</code>; oMLX oQ is pinned to <code>5a39ba3a…</code>. Exact links and line ranges are in the <a href="../resources.html#canonical">canonical evidence ledger</a>.</p>
+<p><strong>Suffix and importance-matrix boundary:</strong> llama.cpp labels ending in <code>_S</code>, <code>_M</code>, or <code>_L</code> distinguish versioned model-file recipe variants; the letters do not encode one universal tensor-by-tensor bit assignment. The pinned quantizer can also consume an importance matrix through <code>--imatrix</code>. Record how that matrix was generated, its data scope, quantizer revision, and every tensor override instead of treating “IQ” or a suffix as a quality guarantee.</p>
 
 <h2>3. A name is incomplete without identifying what changed</h2>
 <p>The <a href="../reference/glossary.html#quantized-target" class="glossary-link">quantized target</a> might be all eligible weights, selected weight tensors, activations, or retained cache/state. Weight-only conversion is common, but it does not follow from “8-bit” alone. Read artifact metadata and the conversion code or command.</p>
@@ -69,18 +73,19 @@
 </div>
 <p>Use these numbers only to learn the distinction. For a new artifact, measure its own bytes and inspect its own tensor metadata.</p>
 
-<h2>5. The four criteria that determine a viable candidate</h2>
+<h2>5. Use the course's five-step decision procedure</h2>
 <ol>
-<li><strong>Identity and provenance.</strong> Same source checkpoint and tokenizer? Pinned conversion tool, recipe, and artifact revision? If not, precision is confounded with model differences.</li>
-<li><strong>Representation and fit.</strong> Which targets changed, what metadata/exception mix is stored, and what are artifact, loaded, retained-state, and peak memory under the intended workload?</li>
-<li><strong>Execution support.</strong> Can the pinned engine/backend load every tensor type? Does the target hardware have native kernels, or does the path unpack, copy, dequantize, or fall back?</li>
-<li><strong>Measured outcomes.</strong> What are prefill/decode speed and paired task quality? Neither suffix nor file size supplies a universal ranking.</li>
+<li><strong>Identify the backend and quantized targets.</strong> Establish source provenance, artifact format, encoding/recipe, target tensors, engine/backend, kernels, and hardware.</li>
+<li><strong>Calculate memory.</strong> Separate artifact bytes, loaded tensors, retained state, measured peak, and capacity headroom.</li>
+<li><strong>Shortlist formats that fit.</strong> Keep only candidates with correct loader/kernel support and measured memory/speed compatible with the deployment constraints.</li>
+<li><strong>Evaluate the exact workload.</strong> Compare paired task outcomes under controlled settings; neither a suffix nor file size supplies a quality ranking.</li>
+<li><strong>Choose the Pareto point.</strong> Apply hard constraints first, then choose among the remaining nondominated measured trade-offs and state uncertainty.</li>
 </ol>
 
 <h3>Kernel support can reverse a size-only prediction</h3>
 <p>A compact tensor encoding reduces memory traffic only if the execution path can exploit it. A fallback may unpack to a wider temporary representation, move work to another device, or use a slower kernel. Therefore measure both memory and speed on the intended stack.</p>
 
-<h2>6. Apply steps 1 and 3 of the decision procedure</h2>
+<h2>6. Record what this lesson establishes for steps 1 and 3</h2>
 <p><strong>Identify:</strong> write the complete comparison tuple for each candidate.</p>
 <pre><code>checkpoint revision
 → artifact format and revision

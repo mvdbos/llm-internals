@@ -19,7 +19,7 @@
 <nav class="course-nav" aria-label="Breadcrumb"><a href="../index.html">← Course home</a><a href="quantization-formats.html">Format reference</a></nav>
 <main>
 <h1>Quantization decision checklist</h1>
-<p>Use these five steps in order. A candidate is not “best” in isolation: it is suitable only for a checkpoint, engine/backend, hardware target, memory boundary, and workload.</p>
+<p>Use these five steps in order. A candidate is not “best” in isolation: it is suitable only for a <a class="glossary-link" href="glossary.html#checkpoint">checkpoint</a>, <a class="glossary-link" href="glossary.html#inference-engine">inference engine</a>/<a class="glossary-link" href="glossary.html#backend">backend</a>, <a class="glossary-link" href="glossary.html#hardware">hardware</a> target, <a class="glossary-link" href="glossary.html#runtime-memory">memory boundary</a>, and workload.</p>
 
 <section class="decision-step" id="identify">
 <h2>1. Identify the backend and quantized targets</h2>
@@ -49,13 +49,15 @@ conventional_kv_bytes = batch × retained_tokens × layers
                       × 2  # keys and values
                       × bytes_per_element
 
-peak_runtime_memory
+measured_peak_runtime_memory
 ≈ loaded_parameters
 + retained_runtime_state
 + activations_and_workspaces
 + runtime_overhead
-+ safety_headroom</code></pre>
-<p>Keep bytes explicit during arithmetic. Convert only at the end: <code>GB = bytes ÷ 1,000,000,000</code>; <code>GiB = bytes ÷ 1,073,741,824</code>. The KV formula applies only to conventional cached attention with the stated dimensions.</p>
+
+required_capacity
+= measured_peak_runtime_memory + safety_headroom</code></pre>
+<p>Safety headroom is a capacity reserve, not part of the measured peak. Keep bytes explicit during arithmetic. Convert only at the end: <code>GB = bytes ÷ 1,000,000,000</code>; <code>GiB = bytes ÷ 1,073,741,824</code>. The KV formula applies only to conventional cached attention with the stated dimensions.</p>
 <dl class="worksheet"><dt>Artifact bytes</dt><dd></dd><dt>Loaded parameters</dt><dd></dd><dt>Retained state</dt><dd></dd><dt>Measured peak</dt><dd></dd><dt>Headroom</dt><dd></dd></dl>
 </section>
 
@@ -86,9 +88,10 @@ peak_runtime_memory
 <section class="decision-step" id="choose">
 <h2>5. Choose the Pareto point</h2>
 <ul>
+<li>Apply hard constraints first: exclude candidates that fail compatibility, quality floors, memory capacity including headroom, or latency/service limits.</li>
 <li>Plot or tabulate quality, latency, and peak memory for every surviving candidate.</li>
 <li>Discard candidates dominated on all declared objectives.</li>
-<li>Choose among the remaining Pareto points using the workload's actual constraints—not a universal format ranking.</li>
+<li>Choose among the remaining feasible Pareto points using the workload's priorities—not a universal format ranking.</li>
 <li>State residual uncertainty, version scope, and the conditions that would trigger re-evaluation.</li>
 </ul>
 <dl class="worksheet"><dt>Chosen candidate</dt><dd></dd><dt>Why this Pareto point</dt><dd></dd><dt>Trade-off accepted</dt><dd></dd><dt>Residual uncertainty</dt><dd></dd><dt>Re-evaluate when</dt><dd></dd></dl>
@@ -155,6 +158,7 @@ conventional KV estimate:   1 × 4,096 × 16 × 8 × 128 × 2 × 2
 <li>Public artifacts use stable aliases and expose no private identity, prompt, patch, path, or raw trajectory.</li>
 </ul>
 <p>Supporting references: <a href="quantization-formats.html">artifacts, encodings, and runtimes</a> · <a href="tensors-and-layers.html">tensors and runtime state</a> · <a href="../resources.html#canonical">evidence ledger</a>.</p>
+<div class="terms-footer"><p><strong>Terms in this reference:</strong> <a href="glossary.html#checkpoint">Checkpoint</a> · <a href="glossary.html#inference-engine">Inference engine</a> · <a href="glossary.html#backend">Backend</a> · <a href="glossary.html#hardware">Hardware</a> · <a href="glossary.html#runtime-memory">Runtime memory</a></p></div>
 </main>
 <nav class="course-nav" aria-label="Footer"><a href="../index.html">← Course home</a><a href="quantization-formats.html">Format reference</a></nav>
 </body>

@@ -9,6 +9,42 @@ from scripts.audit_course import audit_workspace
 
 
 class CourseAuditTests(unittest.TestCase):
+    def test_skips_private_raw_and_job_html(self):
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "index.html").write_text("<main><h1>Public</h1></main>")
+            for relative in (
+                Path("case-study/private/private.html"),
+                Path("case-study/raw/raw.html"),
+                Path("jobs/job.html"),
+            ):
+                path = root / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text('<a href="private-secret.html">private</a>')
+
+            issues = audit_workspace(root)
+
+        self.assertFalse(
+            any(
+                issue.path.parts[:2] in (("case-study", "private"), ("case-study", "raw"))
+                or issue.path.parts[:1] == ("jobs",)
+                for issue in issues
+            )
+        )
+
+    def test_tombstone_is_exempt_from_main_landmark_requirement(self):
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "lessons").mkdir()
+            (root / "lessons" / "withdrawn.html").write_text(
+                '<body data-course-tombstone="true"><h1>Withdrawn</h1></body>',
+                encoding="utf-8",
+            )
+
+            codes = {issue.code for issue in audit_workspace(root)}
+
+        self.assertNotIn("main-landmark-count", codes)
+
     def test_reports_missing_local_fragment(self):
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -214,6 +250,23 @@ class CourseAuditTests(unittest.TestCase):
             )
             codes = {issue.code for issue in audit_workspace(root)}
             self.assertNotIn("manifest-duration-mismatch", codes)
+
+    def test_requires_reference_pages_to_use_glossary_contract(self):
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "reference").mkdir()
+            (root / "reference" / "glossary.html").write_text(
+                '<main><dl><dt id="tensor">Tensor</dt></dl></main>',
+                encoding="utf-8",
+            )
+            (root / "reference" / "concept.html").write_text(
+                "<main><p>A tensor contains values.</p></main>",
+                encoding="utf-8",
+            )
+
+            codes = {issue.code for issue in audit_workspace(root)}
+
+        self.assertIn("reference-glossary-contract-absent", codes)
 
     def test_reports_glossary_term_without_id(self):
         with TemporaryDirectory() as tmp:

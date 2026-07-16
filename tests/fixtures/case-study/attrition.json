@@ -7,15 +7,17 @@
       "bf16": {"scheme_alias": "bf16-weights"},
       "mlx-affine-int8-g64": {"scheme_alias": "mlx-affine-int8-g64"}
     },
+    "baseline_condition": "bf16",
+    "treatment_condition": "mlx-affine-int8-g64",
     "task_aliases": ["task-01", "task-02", "task-03"],
     "repetitions": [1]
   },
   "trials": [
-    {"checkpoint_alias":"dense-27b","architecture":"dense-hybrid","engine_alias":"omlx-0.5.1","precision_alias":"bf16","scheme_alias":"bf16-weights","task_alias":"task-01","repetition":1,"attempt_status":"valid","verifier_status":"complete","reward":1,"f2p":1.0,"p2p":1.0,"steps":20,"input_tokens":100,"output_tokens":50,"elapsed_seconds":200},
-    {"checkpoint_alias":"dense-27b","architecture":"dense-hybrid","engine_alias":"omlx-0.5.1","precision_alias":"mlx-affine-int8-g64","scheme_alias":"mlx-affine-int8-g64","task_alias":"task-01","repetition":1,"attempt_status":"valid","verifier_status":"complete","reward":0,"f2p":0.8,"p2p":1.0,"steps":25,"input_tokens":120,"output_tokens":60,"elapsed_seconds":240},
+    {"checkpoint_alias":"dense-27b","architecture":"dense-hybrid","engine_alias":"omlx-0.5.1","precision_alias":"bf16","scheme_alias":"bf16-weights","task_alias":"task-01","repetition":1,"attempt_status":"completed","verifier_status":"complete","reward":1,"f2p":1.0,"p2p":1.0,"steps":20,"input_tokens":100,"output_tokens":50,"elapsed_seconds":200},
+    {"checkpoint_alias":"dense-27b","architecture":"dense-hybrid","engine_alias":"omlx-0.5.1","precision_alias":"mlx-affine-int8-g64","scheme_alias":"mlx-affine-int8-g64","task_alias":"task-01","repetition":1,"attempt_status":"completed","verifier_status":"complete","reward":0,"f2p":0.8,"p2p":1.0,"steps":25,"input_tokens":120,"output_tokens":60,"elapsed_seconds":240},
     {"checkpoint_alias":"dense-27b","architecture":"dense-hybrid","engine_alias":"omlx-0.5.1","precision_alias":"bf16","scheme_alias":"bf16-weights","task_alias":"task-02","repetition":1,"attempt_status":"model_agent_timeout","verifier_status":"missing","reward":0,"f2p":null,"p2p":null,"steps":150,"input_tokens":5000,"output_tokens":2000,"elapsed_seconds":7200},
-    {"checkpoint_alias":"dense-27b","architecture":"dense-hybrid","engine_alias":"omlx-0.5.1","precision_alias":"mlx-affine-int8-g64","scheme_alias":"mlx-affine-int8-g64","task_alias":"task-02","repetition":1,"attempt_status":"valid","verifier_status":"complete","reward":0,"f2p":0.9,"p2p":1.0,"steps":100,"input_tokens":4000,"output_tokens":1800,"elapsed_seconds":6000},
+    {"checkpoint_alias":"dense-27b","architecture":"dense-hybrid","engine_alias":"omlx-0.5.1","precision_alias":"mlx-affine-int8-g64","scheme_alias":"mlx-affine-int8-g64","task_alias":"task-02","repetition":1,"attempt_status":"completed","verifier_status":"complete","reward":0,"f2p":0.9,"p2p":1.0,"steps":100,"input_tokens":4000,"output_tokens":1800,"elapsed_seconds":6000},
     {"checkpoint_alias":"dense-27b","architecture":"dense-hybrid","engine_alias":"omlx-0.5.1","precision_alias":"bf16","scheme_alias":"bf16-weights","task_alias":"task-03","repetition":1,"attempt_status":"environment_harness_failure","verifier_status":"missing","reward":null,"f2p":null,"p2p":null,"steps":null,"input_tokens":null,"output_tokens":null,"elapsed_seconds":30},
-    {"checkpoint_alias":"dense-27b","architecture":"dense-hybrid","engine_alias":"omlx-0.5.1","precision_alias":"mlx-affine-int8-g64","scheme_alias":"mlx-affine-int8-g64","task_alias":"task-03","repetition":1,"attempt_status":"valid","verifier_status":"verifier_only_failure","reward":null,"f2p":null,"p2p":null,"steps":90,"input_tokens":3500,"output_tokens":1500,"elapsed_seconds":5000}
+    {"checkpoint_alias":"dense-27b","architecture":"dense-hybrid","engine_alias":"omlx-0.5.1","precision_alias":"mlx-affine-int8-g64","scheme_alias":"mlx-affine-int8-g64","task_alias":"task-03","repetition":1,"attempt_status":"completed","verifier_status":"verifier_only_failure","reward":null,"f2p":null,"p2p":null,"steps":90,"input_tokens":3500,"output_tokens":1500,"elapsed_seconds":5000}
   ]
 }

@@ -28,6 +28,8 @@ The installed artifacts currently provide strong parity evidence:
 - indexed weight shards are complete in both conditions;
 - the quantized tensor index contains expected scale and bias auxiliaries.
 
+Expected treatment-induced storage differences are permitted: packed weight shapes/dtypes, quantization metadata, scale/bias auxiliary tensors, and shard layout may differ. Functional architecture fields, tokenizer/template, generation behavior, and all non-treatment execution settings must remain matched. An expected quantized tensor layout is not itself a parity failure.
+
 ### Mandatory checkpoint-provenance gate
 
 The inspected metadata does **not yet record the exact upstream snapshot revision clearly enough to claim exact-checkpoint identity**. Before the smoke pair, the ignored private manifest must capture immutable source provenance for both artifacts and prove that it resolves to the same source revision. If this cannot be established, the experiment stops; “same checkpoint family” is not sufficient for a causal precision contrast.
@@ -148,13 +150,14 @@ Tasks execute in alias order. Only one trial runs at a time. Warm-up and cleanup
 
 ## 7. Attrition and rerun rules
 
-Every discovered trial receives exactly one attempt classification:
+Every discovered attempt receives a positive attempt number, an explicit analysis-selection flag, and one model/agent classification:
 
 - `completed`: valid model/agent attempt reached a normal terminal state;
 - `model_agent_timeout`: valid outcome; retained, never rerun merely for being slow or unsuccessful;
 - `model_agent_failure`: valid outcome when the harness ran correctly but the agent/model failed;
 - `environment_harness_failure`: infrastructure prevented a valid model/agent attempt;
-- `verifier_only_failure`: attempt exists, but the verifier failed independently.
+
+Verifier state is tracked separately as `complete`, `missing`, or `verifier_only_failure`; it does not overwrite the model/agent attempt status.
 
 Rules:
 
@@ -162,8 +165,9 @@ Rules:
 2. Environment/harness failures may be repaired and rerun once under a documented, condition-neutral repair.
 3. Verifier-only failures may rerun the verifier without rerunning inference when the original artifact is intact; otherwise follow the environment-failure rule.
 4. Original failed records remain in the attrition table even when a rerun succeeds.
-5. No run is excluded because its score, steps, tokens, latency, repetition, or trajectory looks unusual.
-6. A primary paired difference is missing when either member lacks verifier-covered F2P/P2P; missing pairs are counted and shown, not silently dropped.
+5. Exactly one attempt is selected per planned cell. Infrastructure failures cannot be selected; an authorized rerun may replace one for analysis without deleting the original record.
+6. No run is excluded because its score, steps, tokens, latency, repetition, or trajectory looks unusual.
+7. A primary paired difference is missing when either member lacks verifier-covered F2P/P2P with numerator/denominator counts; missing pairs are counted and shown, not silently dropped. Reward pairing is reported independently.
 
 Report discovered artifacts, valid attempts, verifier-covered attempts, and successful completions separately.
 

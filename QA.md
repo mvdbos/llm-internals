@@ -20,7 +20,7 @@
 | 390×844 | Index, mission, Lessons 1–4, glossary, all three reference pages, resources | Pass | Every document width equaled the 390 px viewport; no unexplained horizontal page overflow and no uncontained offending element. |
 | 390×844 | All lesson/reference table regions | Pass | Tables wider than 358 px remained inside their 358 px scroll region; the document itself remained 390 px wide. |
 | 390×844 | All lesson/reference code/formula blocks | Pass | Blocks wrapped or remained inside their containing table scroll region; none widened the document. |
-| Any | Historical Lesson 3 URL | Pass | Visible, `noindex` compatibility redirect to the supported Lesson 3. |
+| Any | Historical Lesson 3 URL | Pass | Visible, `noindex` withdrawal notice linking to the supported Lesson 3; no automatic refresh hides the evidence warning. |
 | Any | Lesson 5 and result page | Deferred | These depend on the paused paired trials. The index shows an unlinked deferred status instead of fabricated content. |
 
 ## Quiz and keyboard QA

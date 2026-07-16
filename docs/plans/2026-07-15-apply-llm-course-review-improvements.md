@@ -14,7 +14,7 @@
 
 ## 1. Scope, baseline, and non-negotiable rules
 
-- Baseline repository: `/Users/matthijs/Projects/llm-teach`
+- Baseline repository: `$COURSE_REPO`
 - Baseline HEAD: `ee8d240`
 - Baseline state: clean working tree
 - Public course rule: do not expose provider/model names, personal setup details, local paths, prompts, private patches, or raw trajectories.
@@ -819,7 +819,7 @@ Default full design:
 - two conditions;
 - **40 sequential trials total**.
 
-Use `/Users/matthijs/Projects/deep-swe/tasks/manifest.json` to resolve IDs and indices. Record why each task was selected. If compute constraints force a smaller pilot, label it a pilot and prohibit general recommendations until the full design is completed.
+Use `$DEEP_SWE_DIR/tasks/manifest.json` to resolve IDs and indices. Record why each task was selected. If compute constraints force a smaller pilot, label it a pilot and prohibit general recommendations until the full design is completed.
 
 **Step 4: Freeze controlled variables**
 
@@ -965,7 +965,7 @@ Use public aliases in `protocol.md`; keep exact local model/provider IDs in the 
 
 **Steps:**
 
-1. Resolve selected task indices from `/Users/matthijs/Projects/deep-swe/tasks/manifest.json`; never use filesystem order.
+1. Resolve selected task indices from `$DEEP_SWE_DIR/tasks/manifest.json`; never use filesystem order.
 2. Start Docker if needed with `open -a Docker`.
 3. Verify oMLX exposes both private model IDs.
 4. Snapshot effective model settings into the ignored manifest.
@@ -977,7 +977,7 @@ Use public aliases in `protocol.md`; keep exact local model/provider IDs in the 
 
 ```bash
 source case-study/private/models.env
-DEEP_SWE_DIR="/Users/matthijs/Projects/deep-swe" \
+DEEP_SWE_DIR="$DEEP_SWE_DIR" \
 DEEP_SWE_MODEL="$MODEL_ID" \
 bash /Users/matthijs/.bin/deep-swe <<< "$MANIFEST_INDEX"
 ```

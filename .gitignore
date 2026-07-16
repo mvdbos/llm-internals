@@ -1,6 +1,7 @@
 __pycache__/
 *.py[cod]
 
+NOTES.md
 case-study/private/*
 !case-study/private/README.md
 !case-study/private/manifest.example.json

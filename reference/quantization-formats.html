@@ -11,7 +11,7 @@
 <nav class="course-nav" aria-label="Breadcrumb"><a href="../index.html">← Course home</a><a href="glossary.html">Glossary</a></nav>
 <main>
 <h1>Reference: quantization artifacts, encodings, and runtimes</h1>
-<p>A label such as “8-bit” is not enough to compare two artifacts. Identify the container, tensor encoding, quantized target, grouping, recipe, engine/backend version, and kernel support.</p>
+<p>A label such as “8-bit” is not enough to compare two <a class="glossary-link" href="glossary.html#artifact">artifacts/containers</a>. Identify the tensor encoding, <a class="glossary-link" href="glossary.html#quantized-target">quantized target</a>, <a class="glossary-link" href="glossary.html#group-size">grouping</a>, recipe, <a class="glossary-link" href="glossary.html#inference-engine">inference engine</a>/<a class="glossary-link" href="glossary.html#backend">backend</a> version, and <a class="glossary-link" href="glossary.html#kernel">kernel</a> support.</p>
 
 <h2>Keep the layers of the stack separate</h2>
 <div class="table-scroll" role="region" aria-label="Quantization ecosystem layers" tabindex="0">
@@ -61,15 +61,18 @@ model_effective_bpw = 8 × counted_model_tensor_bytes ÷ declared_parameter_coun
 </div>
 <p>Source and raw block-structure links: <a href="../resources.html#canonical">canonical evidence ledger</a>.</p>
 
-<h2>Three concrete eight-bit examples that are not synonyms</h2>
-<div class="table-scroll" role="region" aria-label="Distinct eight-bit encodings" tabindex="0">
-<p class="scroll-hint">Scroll horizontally to compare the three encodings.</p>
+<h2>Concrete versioned labels that are not synonyms</h2>
+<div class="table-scroll" role="region" aria-label="Distinct versioned quantization labels" tabindex="0">
+<p class="scroll-hint">Scroll horizontally to compare every label.</p>
 <table>
 <caption>Versioned implementation comparison: GGML af97976c…, MLX v0.32.0/7a1d4f5c…, and oMLX oQ 5a39ba3a…; artifact scope in the evidence ledger</caption>
 <thead><tr><th scope="col">Name</th><th scope="col">Artifact/ecosystem</th><th scope="col">Grouping and metadata</th><th scope="col">What the name does not imply</th></tr></thead>
 <tbody>
 <tr><th scope="row"><code>Q8_0</code></th><td>GGML tensor type commonly stored in GGUF</td><td>Blocks of 32 values; one FP16 scale plus 32 signed 8-bit quants in the pinned GGML structure</td><td>Not MLX affine 8-bit and not current oQ8</td></tr>
 <tr><th scope="row">MLX affine 8-bit/group 64</th><td>MLX artifact metadata/API</td><td>Affine mode with 64-value groups, packed weights, scales, and biases</td><td>Not <code>Q8_0</code>; not an oQ quality level; not activation or cache quantization by default</td></tr>
+<tr><th scope="row">MLX MXFP4/group 32</th><td>MLX quantization mode</td><td>Four-bit floating-point values with E8M0 group scales and no affine bias in the pinned API</td><td>Not affine four-bit and not an oQ4 model-file recipe</td></tr>
+<tr><th scope="row">MLX NVFP4/group 16</th><td>MLX quantization mode</td><td>Four-bit floating-point values with E4M3 group scales and no affine bias in the pinned API</td><td>Not MXFP4 and not interchangeable with another backend's “FP4” label</td></tr>
+<tr><th scope="row">Current oMLX oQ4/oQ6</th><td>oMLX oQ mixed-precision recipes at commit <code>5a39ba3…</code></td><td>Affine/group-64 base precision with sensitivity-driven budgeted boosts for eligible non-expert tensors</td><td>Not one uniform four- or six-bit tensor encoding and not a universal quality tier</td></tr>
 <tr><th scope="row">Current oMLX oQ8</th><td>oMLX oQ recipe at commit <code>5a39ba3…</code></td><td>Current documentation specifies MXFP8 with group size 32</td><td>Not the historical/private affine 8-bit/group-64 condition and not GGML <code>Q8_0</code></td></tr>
 </tbody>
 </table>
@@ -114,6 +117,7 @@ model_effective_bpw = 8 × counted_model_tensor_bytes ÷ declared_parameter_coun
 → kernels + hardware
 → measured memory, speed, and paired task quality</code></pre>
 <p>Only compare candidates after every field is known or explicitly marked unknown. Choose among measured Pareto points rather than relying on a format ranking or universal default.</p>
+<div class="terms-footer"><p><strong>Terms in this reference:</strong> <a href="glossary.html#artifact">Artifact/container</a> · <a href="glossary.html#quantized-target">Quantized target</a> · <a href="glossary.html#group-size">Group size</a> · <a href="glossary.html#inference-engine">Inference engine</a> · <a href="glossary.html#backend">Backend</a> · <a href="glossary.html#kernel">Kernel</a></p></div>
 </main>
 <nav class="course-nav" aria-label="Footer"><a href="../index.html">← Course home</a><a href="quantization-decision-checklist.html">Decision checklist</a><a href="glossary.html">Glossary</a></nav>
 </body>

@@ -67,7 +67,10 @@ class _PageParser(HTMLParser):
             values.get("data-overflow-explanation") or ""
         ).strip():
             self.unexplained_overflow_waivers += 1
-        if tag == "body" and values.get("data-course-redirect") == "true":
+        if tag == "body" and (
+            values.get("data-course-redirect") == "true"
+            or values.get("data-course-tombstone") == "true"
+        ):
             self.is_redirect = True
         if tag == "script":
             if values.get("src"):
@@ -290,9 +293,15 @@ def _audit_manifest(
 
 
 def audit_workspace(root: Path, *, allow_planned_lessons: bool = False) -> list[Issue]:
-    """Return deterministic structural issues for every HTML file below root."""
+    """Return deterministic structural issues for the explicit public HTML roots."""
     root = root.resolve()
-    pages = sorted(root.rglob("*.html"))
+    pages = sorted(
+        {
+            *root.glob("*.html"),
+            *(root / "lessons").rglob("*.html"),
+            *(root / "reference").rglob("*.html"),
+        }
+    )
     parsed_pages = {page.resolve(): _parse_page(page) for page in pages}
     issues: list[Issue] = []
 
@@ -422,6 +431,20 @@ def audit_workspace(root: Path, *, allow_planned_lessons: bool = False) -> list[
             for href in parsed_pages[source_resolved].footer_hrefs
             if (target := _local_target(source_resolved, href)) is not None
         }
+        relative_glossary_source = source.relative_to(root)
+        if (
+            source_resolved != glossary_path
+            and relative_glossary_source.parts[:1] == ("reference",)
+            and not page.is_redirect
+            and (not glossary_targets or not footer_targets)
+        ):
+            issues.append(
+                Issue(
+                    "reference-glossary-contract-absent",
+                    relative_glossary_source,
+                    "reference page needs inline glossary links and a matching terms footer",
+                )
+            )
         glossary_term_ids = set(glossary.dt_ids) if glossary else set()
         for target_path, fragment in sorted(
             set(glossary_targets), key=lambda item: (str(item[0]), item[1])

@@ -11,6 +11,8 @@
         "scheme_alias": "mlx-affine-int8-g64"
       }
     },
+    "baseline_condition": "bf16",
+    "treatment_condition": "mlx-affine-int8-g64",
     "task_aliases": [
       "task-01",
       "task-02",
@@ -21,26 +23,54 @@
     "repetitions": [1, 2, 3, 4]
   },
   "private_provenance": {
-    "checkpoint_source_revision": "<immutable-private-revision>",
-    "parity_status": "<verified-or-blocked>"
+    "parity_status": "pending",
+    "alias_map_status": "pending",
+    "effective_settings_snapshot_sha256": "<64-lowercase-hex-digest>",
+    "condition_sources": {
+      "bf16": {
+        "checkpoint_source_revision": "<immutable-private-revision>",
+        "tokenizer_revision": "<immutable-private-tokenizer-revision>"
+      },
+      "mlx-affine-int8-g64": {
+        "checkpoint_source_revision": "<same-immutable-private-revision>",
+        "tokenizer_revision": "<same-immutable-private-tokenizer-revision>"
+      }
+    }
   },
   "private_condition_mapping": {
     "bf16": {
-      "model_id": "<exact-local-model-id>"
+      "model_id": "<exact-private-model-id>"
     },
     "mlx-affine-int8-g64": {
-      "model_id": "<exact-local-model-id>"
+      "model_id": "<exact-private-model-id>"
     }
   },
   "private_task_mapping": {
     "task-01": {
       "manifest_index": "<zero-based-private-index>",
       "task_id": "<exact-private-task-id>"
+    },
+    "task-02": {
+      "manifest_index": "<zero-based-private-index>",
+      "task_id": "<exact-private-task-id>"
+    },
+    "task-03": {
+      "manifest_index": "<zero-based-private-index>",
+      "task_id": "<exact-private-task-id>"
+    },
+    "task-04": {
+      "manifest_index": "<zero-based-private-index>",
+      "task_id": "<exact-private-task-id>"
+    },
+    "task-05": {
+      "manifest_index": "<zero-based-private-index>",
+      "task_id": "<exact-private-task-id>"
     }
   },
   "matrix": {
     "execution": "sequential",
-    "condition_order": "odd repetitions bf16 first; even repetitions affine-8-bit first",
+    "task_order": "alias",
+    "condition_order": "alternating-by-repetition",
     "expected_trials": 40
   },
   "trials": [
@@ -52,7 +82,23 @@
       "scheme_alias": "bf16-weights",
       "task_alias": "task-01",
       "repetition": 1,
-      "trial_path": "<absolute-private-pier-trial-directory>"
+      "attempt": 1,
+      "selected_for_analysis": true,
+      "attempt_status": "completed",
+      "verifier_status": "complete",
+      "reward": 1,
+      "f2p": 1.0,
+      "f2p_numerator": 1,
+      "f2p_denominator": 1,
+      "p2p": 1.0,
+      "p2p_numerator": 1,
+      "p2p_denominator": 1,
+      "steps": 0,
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "elapsed_seconds": 0,
+      "peak_context_tokens": 0,
+      "record_path": "<private-record-path>"
     }
   ]
 }

@@ -3,30 +3,47 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="The learner objective for the LLM Internals for Quantization Decisions course.">
-<title>Mission — LLM Internals for Quantization Decisions</title>
+<meta name="description" content="Who the course is for, what practical decisions it supports, and what it does not try to teach.">
+<title>Goal and intended audience — LLM Internals for Quantization Decisions</title>
 <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
 <nav class="course-nav" aria-label="Breadcrumb"><a href="index.html">← Course home</a><a href="resources.html">Evidence ledger</a></nav>
 <main>
-<h1>Mission</h1>
+<h1>Goal and intended audience</h1>
 
-<p><strong>As an amateur, I want to run the best possible local model on my hardware.</strong></p>
+<h2>Who this course is for</h2>
+<p>This course is for people who want to run a local language model and have already chosen the model itself.</p>
+<p>You do not need to be an LLM engineer. You do need a practical way to choose a model artifact and runtime setup that fits your hardware, performs well enough, and remains useful for the work you actually want to do.</p>
 
-<h2>Primary goal</h2>
+<h2>The goal</h2>
+<p>By the end of the course, you should be able to make and explain a choice between compatible local-model candidates.</p>
+<ol>
+<li>Identify what a model download and its labels actually describe.</li>
+<li>Distinguish model-file size from the memory needed while the model runs.</li>
+<li>Rule out candidates that do not fit your runtime, context requirement, or available headroom.</li>
+<li>Compare the remaining candidates on the workload that matters to you.</li>
+<li>Choose a quality, speed, and memory trade-off while stating what is still uncertain.</li>
+</ol>
+<p>The goal is not to find a universally “best” quantization. There is no such answer. A good choice depends on the selected model, your hardware, the runtime you can use, the context you need, and the work you expect the model to perform.</p>
 
-<p>Once I have selected a model, I want practical guidance for choosing the right quantization and the other settings that materially affect whether it fits, runs well, and remains useful for my work. When I see options like <code>Q4_K_M</code>, <code>Q8_0</code>, <code>IQ3_XXS</code>, or <code>bf16</code>, I want to know what trade-off I am making—not just follow a rule of thumb.</p>
+<h2>What this course covers</h2>
+<ul>
+<li>How quantization changes stored weights.</li>
+<li>Why a smaller download may still need more runtime memory than expected.</li>
+<li>How to read an artifact, recipe, and runtime label without treating them as interchangeable.</li>
+<li>How to shortlist candidates that fit.</li>
+<li>How much validation is appropriate before making a choice.</li>
+</ul>
 
-<h2>Supporting knowledge</h2>
+<h2>What it does not try to teach</h2>
+<p>This is not a course on choosing the best base model, training models, or becoming an expert in quantization implementations.</p>
+<p>It also does not offer a universal ranking such as “always choose four-bit” or “the smallest file is best.” Detailed format catalogues, source-level implementation details, and rigorous experimental protocol are available as reference material when you need them.</p>
 
-<p>I want to learn the supporting knowledge that helps me make those choices confidently: what weights are, why quantization approximates them, why file size differs from runtime memory, what a format label does and does not identify, and how to compare candidates on the work I actually do.</p>
-
-<p>I am not trying to become an expert in LLM internals, quantization implementations, or evaluation methodology. Technical detail belongs in the course only when it explains a practical local-model decision; deeper detail should remain available as reference material.</p>
-
-<h2>What “best” means</h2>
-
-<p>There is no universal best quant or local setup. The best choice depends on the selected model, available hardware and headroom, runtime compatibility, speed needs, and intended workload. The aim is to make a well-scoped choice and validate it when the trade-off matters—not to memorize a universal ranking or blindly benchmark everything.</p>
+<h2>How to use the course</h2>
+<p>Follow the lessons in order the first time. They build the minimum knowledge needed for the next practical decision:</p>
+<p><strong>weights and approximation → runtime memory → candidate identification → choice and validation</strong></p>
+<p>When you are evaluating a real candidate later, return to the <a href="reference/quantization-decision-checklist.html">decision checklist</a> and the relevant reference pages rather than trying to memorize every format name.</p>
 </main>
 <nav class="course-nav" aria-label="Footer"><a href="index.html">← Course home</a><a href="lessons/0001-tensors-and-layers.html">Start Lesson 1</a></nav>
 </body>

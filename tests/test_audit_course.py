@@ -251,6 +251,43 @@ class CourseAuditTests(unittest.TestCase):
             codes = {issue.code for issue in audit_workspace(root)}
             self.assertNotIn("manifest-duration-mismatch", codes)
 
+    def test_reference_glossary_inventory_rejects_missing_required_terms(self):
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "reference").mkdir()
+            (root / "reference" / "glossary.html").write_text(
+                "<dl>"
+                '<dt id="artifact">Artifact</dt>'
+                '<dt id="inference-engine">Inference Engine</dt>'
+                '<dt id="parameter">Parameter</dt>'
+                '<dt id="activation">Activation</dt>'
+                '<dt id="retained-runtime-state">Retained Runtime State</dt>'
+                "</dl>",
+                encoding="utf-8",
+            )
+            (root / "reference" / "tensors-and-layers.html").write_text(
+                '<main><p>A parameter and activation are runtime state.</p>'
+                '<a class="glossary-link" href="glossary.html#artifact">Artifact</a>'
+                '<div class="terms-footer">'
+                '<a href="glossary.html#artifact">Artifact</a>'
+                "</div></main>",
+                encoding="utf-8",
+            )
+
+            issues = audit_workspace(root)
+
+        missing = {
+            issue.detail
+            for issue in issues
+            if issue.code == "glossary-required-link-missing"
+        }
+        self.assertIn("required glossary target 'parameter' has no inline link", missing)
+        self.assertIn("required glossary target 'activation' has no inline link", missing)
+        self.assertIn(
+            "required glossary target 'retained-runtime-state' has no inline link",
+            missing,
+        )
+
     def test_requires_reference_pages_to_use_glossary_contract(self):
         with TemporaryDirectory() as tmp:
             root = Path(tmp)

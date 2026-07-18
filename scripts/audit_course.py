@@ -12,6 +12,23 @@ import re
 from urllib.parse import unquote, urlsplit
 
 
+# These pages teach several terms by necessity. Keep an explicit inventory so
+# the footer-parity audit cannot pass vacuously when an instructional link is
+# accidentally removed. Add entries when a technical reference gains a new
+# first-occurrence glossary obligation.
+REQUIRED_GLOSSARY_TARGETS: dict[str, frozenset[str]] = {
+    "reference/tensors-and-layers.html": frozenset(
+        {
+            "artifact",
+            "inference-engine",
+            "parameter",
+            "activation",
+            "retained-runtime-state",
+        }
+    ),
+}
+
+
 @dataclass(frozen=True)
 class Issue:
     code: str
@@ -446,6 +463,22 @@ def audit_workspace(root: Path, *, allow_planned_lessons: bool = False) -> list[
                 )
             )
         glossary_term_ids = set(glossary.dt_ids) if glossary else set()
+        required_targets = REQUIRED_GLOSSARY_TARGETS.get(
+            relative_glossary_source.as_posix(), frozenset()
+        )
+        linked_term_ids = {
+            fragment
+            for target_path, fragment in glossary_targets
+            if target_path == glossary_path
+        }
+        for required_target in sorted(required_targets - linked_term_ids):
+            issues.append(
+                Issue(
+                    "glossary-required-link-missing",
+                    relative_glossary_source,
+                    f"required glossary target {required_target!r} has no inline link",
+                )
+            )
         for target_path, fragment in sorted(
             set(glossary_targets), key=lambda item: (str(item[0]), item[1])
         ):

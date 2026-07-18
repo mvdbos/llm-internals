@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="A print-friendly five-step checklist for evidence-based LLM quantization decisions.">
+<meta name="description" content="A practical checklist for choosing and validating a local-model quantization after Lesson 5.">
 <title>Reference: Quantization Decision Checklist</title>
 <link rel="stylesheet" href="../assets/style.css">
 <style>
@@ -16,150 +16,100 @@
 </style>
 </head>
 <body>
-<nav class="course-nav" aria-label="Breadcrumb"><a href="../index.html">← Course home</a><a href="quantization-formats.html">Format reference</a></nav>
+<nav class="course-nav" aria-label="Breadcrumb"><a href="../index.html">← Course home</a><a href="../lessons/0005-choosing-and-validating-a-quant.html">Lesson 5: Choose and validate</a></nav>
 <main>
 <h1>Quantization decision checklist</h1>
-<p>Use these five steps in order. A candidate is not “best” in isolation: it is suitable only for a <a class="glossary-link" href="glossary.html#checkpoint">checkpoint</a>, <a class="glossary-link" href="glossary.html#inference-engine">inference engine</a>/<a class="glossary-link" href="glossary.html#backend">backend</a>, <a class="glossary-link" href="glossary.html#hardware">hardware</a> target, <a class="glossary-link" href="glossary.html#runtime-memory">memory boundary</a>, and workload.</p>
+<p><strong>Use this after Lesson 5.</strong> The lessons teach the supporting ideas in a beginner-friendly order. When you evaluate real candidates, use this checklist in the order shown.</p>
+<p>A candidate is not “best” in isolation. It is suitable only for a <a class="glossary-link" href="glossary.html#checkpoint">checkpoint</a>, <a class="glossary-link" href="glossary.html#inference-engine">inference engine</a>/<a class="glossary-link" href="glossary.html#backend">backend</a>, <a class="glossary-link" href="glossary.html#hardware">hardware</a> target, <a class="glossary-link" href="glossary.html#runtime-memory">memory boundary</a>, and workload.</p>
 
 <section class="decision-step" id="identify">
-<h2>1. Identify the backend and quantized targets</h2>
-<ul>
-<li>Pin the source checkpoint and tokenizer revision.</li>
-<li>Name the artifact/container and conversion revision.</li>
-<li>Name the inference engine, backend, version, and hardware.</li>
-<li>List each quantized target separately: weights, activations, retained cache/state, embeddings/output, or selected tensors.</li>
-<li>Record mode, code width, group/block size, calibration or importance procedure, per-tensor exceptions, and model-file mixture recipe.</li>
-</ul>
-<dl class="worksheet"><dt>Checkpoint</dt><dd></dd><dt>Artifact</dt><dd></dd><dt>Engine/backend</dt><dd></dd><dt>Hardware</dt><dd></dd><dt>Quantized targets and recipe</dt><dd></dd></dl>
+<h2>1. Describe each candidate completely</h2>
+<p>Do not rely on a filename or one informal bit label. For every candidate, record:</p>
+<pre><code>checkpoint
++ artifact/container
++ quantized target
++ encoding/recipe and grouping
++ runtime/backend version
++ intended hardware</code></pre>
+<p>This is the output of <a href="../lessons/0004-reading-quantization-formats.html">Lesson 4</a>. A successful load still leaves fit, speed, and workload quality unproven.</p>
+<dl class="worksheet"><dt>Candidate A</dt><dd></dd><dt>Candidate B</dt><dd></dd><dt>Candidate C, if needed</dt><dd></dd></dl>
 </section>
 
-<section class="decision-step" id="calculate-memory">
-<h2>2. Calculate memory</h2>
+<section class="decision-step" id="memory">
+<h2>2. Check fit with useful context and headroom</h2>
 <ul>
-<li>Record artifact bytes; do not call them runtime memory.</li>
-<li>Estimate or measure loaded parameter allocation. If estimating, use effective bpw—not nominal code width.</li>
-<li>Estimate architecture-appropriate retained state. Use a grouped-query-aware KV formula only for conventional cached attention; use a different state model for recurrent, state-space, linear-attention, or hybrid architectures.</li>
-<li>Add temporary activations, workspaces, allocator/runtime overhead, and explicit headroom.</li>
-<li>Verify with a peak measurement under the intended batch, prompt length, and generated length.</li>
+<li>Record artifact size, but do not call it runtime memory.</li>
+<li>Measure loaded or idle memory under the named runtime and loading policy.</li>
+<li>Run a representative prompt length, generated length, and batch.</li>
+<li>Record peak memory and remaining headroom.</li>
+<li>Remove candidates that do not fit the context and headroom you actually need.</li>
 </ul>
-<pre><code>weight_bytes = parameter_count × effective_bpw ÷ 8
-
-conventional_kv_bytes = batch × retained_tokens × layers
-                      × retained_kv_heads × head_dimension
-                      × 2  # keys and values
-                      × bytes_per_element
-
-measured_peak_runtime_memory
-≈ loaded_parameters
-+ retained_runtime_state
-+ activations_and_workspaces
-+ runtime_overhead
-
-required_capacity
-= measured_peak_runtime_memory + safety_headroom</code></pre>
-<p>Safety headroom is a capacity reserve, not part of the measured peak. Keep bytes explicit during arithmetic. Convert only at the end: <code>GB = bytes ÷ 1,000,000,000</code>; <code>GiB = bytes ÷ 1,073,741,824</code>. The KV formula applies only to conventional cached attention with the stated dimensions.</p>
-<dl class="worksheet"><dt>Artifact bytes</dt><dd></dd><dt>Loaded parameters</dt><dd></dd><dt>Retained state</dt><dd></dd><dt>Measured peak</dt><dd></dd><dt>Headroom</dt><dd></dd></dl>
+<p>Lesson 3 explains why file size, loaded weights, retained state, and temporary runtime allocations are different buckets. If architecture-specific calculations are useful, use the <a href="tensors-and-layers.html">runtime-state reference</a>; otherwise prefer a representative peak measurement.</p>
+<dl class="worksheet"><dt>Artifact size</dt><dd></dd><dt>Loaded or idle memory</dt><dd></dd><dt>Representative workload</dt><dd></dd><dt>Peak memory</dt><dd></dd><dt>Remaining headroom</dt><dd></dd></dl>
 </section>
 
 <section class="decision-step" id="shortlist">
-<h2>3. Shortlist formats that fit</h2>
+<h2>3. Shortlist compatible candidates</h2>
 <ul>
-<li>Eliminate candidates that exceed the measured memory boundary with headroom.</li>
-<li>Confirm the pinned engine can load every tensor type and metadata field.</li>
-<li>Confirm native kernels exist for the target hardware; record unpacking, dequantization, copy, or device fallbacks.</li>
-<li>Measure prefill and decode latency/throughput. A smaller artifact is not automatically faster.</li>
-<li>Keep multiple candidates when their memory/speed differences overlap measurement noise.</li>
+<li>Keep only candidates the intended runtime can load and run correctly on the intended hardware.</li>
+<li>Keep only candidates that fit with the context and headroom from Step 2.</li>
+<li>Measure representative generation speed rather than assuming a smaller artifact is faster.</li>
+<li>Keep two or three candidates when quality is still unknown.</li>
 </ul>
-<dl class="worksheet"><dt>Candidate aliases</dt><dd></dd><dt>Loader support</dt><dd></dd><dt>Kernel/fallback notes</dt><dd></dd><dt>Measured memory</dt><dd></dd><dt>Prefill/decode speed</dt><dd></dd></dl>
+<p>If a candidate loads but is unexpectedly slow or uses unexpectedly high memory, consult the optional <a href="quantization-formats.html">format and runtime reference</a> for implementation-level diagnostic detail.</p>
+<dl class="worksheet"><dt>Supported candidates</dt><dd></dd><dt>Fit result</dt><dd></dd><dt>Representative speed</dt><dd></dd><dt>Reason for exclusion</dt><dd></dd></dl>
 </section>
 
-<section class="decision-step" id="evaluate">
-<h2>4. Evaluate the exact workload</h2>
-<ul>
-<li>Pair the same task instance across conditions and hold the agent/harness, tools, prompts, token/context limits, sampling, environment, and scoring fixed.</li>
-<li>Use task-specific quality metrics and an external verifier where possible; do not replace workload evidence with perplexity alone.</li>
-<li>Repeat stochastic runs and retain all failures. Report paired deltas, variation, and uncertainty.</li>
-<li>Preregister exclusions, timeouts, missing-data handling, and any secondary diagnostics.</li>
-<li>Keep qualitative traces private when they contain prompts, patches, paths, or exact private identities; publish only sanitized aggregate evidence.</li>
-</ul>
-<dl class="worksheet"><dt>Task set and aliases</dt><dd></dd><dt>Primary metric</dt><dd></dd><dt>Controlled settings</dt><dd></dd><dt>Repeats</dt><dd></dd><dt>Uncertainty/exclusions</dt><dd></dd></dl>
+<section class="decision-step" id="validate">
+<h2>4. Validate in proportion to the stakes</h2>
+<table>
+<caption>Use enough evidence for the cost of making the wrong choice</caption>
+<thead><tr><th scope="col">Decision stakes</th><th scope="col">Practical validation</th></tr></thead>
+<tbody>
+<tr><th scope="row">Casual or reversible use</th><td>Run representative smoke tests and check for obvious failures.</td></tr>
+<tr><th scope="row">Important recurring workload</th><td>Run the same representative tasks for each shortlisted candidate; repeat when outputs are stochastic.</td></tr>
+<tr><th scope="row">Public, expensive, or causal claim</th><td>Use the <a href="evaluation-protocol.html">controlled evaluation protocol</a>.</td></tr>
+</tbody>
+</table>
+<p>Measure direct task quality first, then interpret memory and speed with that quality. For example, use verified tests for coding, accuracy or F1 for classification, factuality criteria for summarization, a defined rubric or blinded preference for writing, or externally verified completion for agentic work. Report failures instead of silently removing them.</p>
+<dl class="worksheet"><dt>Validation level</dt><dd></dd><dt>Representative tasks</dt><dd></dd><dt>Primary quality result</dt><dd></dd><dt>Failures or caveats</dt><dd></dd></dl>
 </section>
 
 <section class="decision-step" id="choose">
-<h2>5. Choose the Pareto point</h2>
+<h2>5. Choose the supported trade-off</h2>
 <ul>
-<li>Apply hard constraints first: exclude candidates that fail compatibility, quality floors, memory capacity including headroom, or latency/service limits.</li>
-<li>Plot or tabulate quality, latency, and peak memory for every surviving candidate.</li>
-<li>Discard candidates dominated on all declared objectives.</li>
-<li>Choose among the remaining feasible Pareto points using the workload's priorities—not a universal format ranking.</li>
-<li>State residual uncertainty, version scope, and the conditions that would trigger re-evaluation.</li>
+<li>Apply hard constraints first: compatibility, useful context, headroom, and minimum acceptable quality.</li>
+<li>Compare the surviving candidates on task quality, peak memory, and speed.</li>
+<li>Choose the trade-off that best suits the workload—not a universal format winner.</li>
+<li>Record what is still uncertain and what would make you revisit the decision.</li>
 </ul>
-<dl class="worksheet"><dt>Chosen candidate</dt><dd></dd><dt>Why this Pareto point</dt><dd></dd><dt>Trade-off accepted</dt><dd></dd><dt>Residual uncertainty</dt><dd></dd><dt>Re-evaluate when</dt><dd></dd></dl>
+<dl class="worksheet"><dt>Chosen candidate</dt><dd></dd><dt>Quality result</dt><dd></dd><dt>Memory and speed result</dt><dd></dd><dt>Accepted trade-off</dt><dd></dd><dt>Remaining uncertainty</dt><dd></dd><dt>Re-evaluate when</dt><dd></dd></dl>
 </section>
 
-<h2>Evidence table template</h2>
-<div class="table-scroll" role="region" aria-label="Blank candidate evidence table" tabindex="0">
-<p class="scroll-hint">Scroll horizontally to inspect every evidence field.</p>
-<table>
-<caption>Fill one row per candidate under the same accounting and workload rules</caption>
-<thead><tr><th scope="col">Candidate alias</th><th scope="col">Exact scheme and target</th><th scope="col">Artifact / loaded / peak memory</th><th scope="col">Primary quality evidence</th><th scope="col">Latency or throughput</th><th scope="col">Uncertainty and exclusions</th></tr></thead>
-<tbody><tr><th scope="row">________</th><td>________</td><td>________</td><td>________</td><td>________</td><td>________</td></tr><tr><th scope="row">________</th><td>________</td><td>________</td><td>________</td><td>________</td><td>________</td></tr></tbody>
-</table>
-</div>
-
-<h2>Paired-evaluation checklist</h2>
-<ul>
-<li>Same checkpoint and architecture revision.</li>
-<li>Same exact task instance in both conditions.</li>
-<li>Same engine/backend, harness, prompts, tools, limits, decoding settings, and verifier.</li>
-<li>Repeated pairs with condition order controlled or alternated.</li>
-<li>F2P/P2P, reward, or another task-valid quality measure analyzed before steps, tokens, latency, or cost.</li>
-<li>Timeouts and model failures retained as outcomes; infrastructure and verifier failures reported separately.</li>
-<li>Every expected pair, missing metric, repair, rerun, and exclusion accounted for.</li>
-</ul>
-
-<h2>Red flags that block a recommendation</h2>
-<ul>
-<li>Unmatched tasks or different repetition counts.</li>
-<li>Mixed checkpoint families or architectures inside a condition mean.</li>
-<li>Discovered artifact or job counts described as completed trials.</li>
-<li>Missing verifier data silently treated as failure, success, or zero.</li>
-<li>A generic bit label used without mode, group/block size, target, and exceptions.</li>
-<li>An undefined “quality percentage” without metric, baseline, dataset, and scope.</li>
-<li>A smaller artifact assumed to be faster without a kernel/runtime measurement.</li>
-</ul>
-
 <h2>Blank decision record</h2>
-<dl class="worksheet"><dt>Decision and date</dt><dd></dd><dt>Checkpoint / tokenizer revision</dt><dd></dd><dt>Engine/backend / hardware</dt><dd></dd><dt>Memory boundary and headroom</dt><dd></dd><dt>Candidates and exact schemes</dt><dd></dd><dt>Paired workload evidence</dt><dd></dd><dt>Chosen Pareto point</dt><dd></dd><dt>Accepted trade-off</dt><dd></dd><dt>Residual uncertainty</dt><dd></dd><dt>Re-evaluation trigger</dt><dd></dd></dl>
+<dl class="worksheet"><dt>Selected model/checkpoint</dt><dd></dd><dt>Hardware and usable memory</dt><dd></dd><dt>Compatible runtime</dt><dd></dd><dt>Required context/headroom</dt><dd></dd><dt>Shortlisted candidates</dt><dd></dd><dt>Validation level</dt><dd></dd><dt>Primary quality result</dt><dd></dd><dt>Memory and speed result</dt><dd></dd><dt>Choice</dt><dd></dd><dt>Remaining uncertainty</dt><dd></dd></dl>
 
-<h2>Completed generic example</h2>
-<p><strong>Illustrative values only—not empirical claims.</strong> A fictional 3-billion-parameter conventional-attention model must run inside a measured 4.0 GiB process boundary while retaining at least 0.5 GiB headroom. It uses batch 1, 4,096 retained tokens, 16 layers, 8 KV heads, head dimension 128, and a two-byte KV element.</p>
-<pre><code>candidate A weight estimate: 3,000,000,000 × 5.0 ÷ 8
-                           = 1.8750 GB = 1.7462 GiB
-candidate B weight estimate: 3,000,000,000 × 6.5 ÷ 8
-                           = 2.4375 GB = 2.2701 GiB
-conventional KV estimate:   1 × 4,096 × 16 × 8 × 128 × 2 × 2
-                           = 268,435,456 bytes = 0.2500 GiB</code></pre>
-<div class="table-scroll" role="region" aria-label="Completed generic decision example" tabindex="0">
-<p class="scroll-hint">Scroll horizontally to inspect the completed comparison.</p>
-<table>
-<caption>Fictional paired evidence under one engine, hardware target, and task set</caption>
-<thead><tr><th scope="col">Candidate</th><th scope="col">Measured peak</th><th scope="col">Paired task score</th><th scope="col">Median decode latency</th><th scope="col">Constraint result</th></tr></thead>
-<tbody><tr><th scope="row">A</th><td>3.0 GiB</td><td>0.84</td><td>38 ms/token</td><td>Fits with 1.0 GiB headroom</td></tr><tr><th scope="row">B</th><td>3.7 GiB</td><td>0.86</td><td>35 ms/token</td><td>Fails the 0.5 GiB headroom rule</td></tr></tbody>
-</table>
-</div>
-<p><strong>Decision:</strong> choose candidate A for this deployment. Candidate B has the better fictional quality and latency measurements, but it violates the preregistered headroom constraint. The accepted trade-off is a 0.02 lower task score and 3 ms/token slower decode in exchange for 0.7 GiB more measured headroom. Re-evaluate if the memory boundary, workload score, engine version, or candidate artifacts change.</p>
-
-<h2>Release check</h2>
+<h2>Optional depth</h2>
+<p>You do not need this material for every local-model choice. Use it when the decision is high-stakes, a candidate behaves unexpectedly, or you need to make an implementation-specific or public claim.</p>
 <ul>
-<li>Every implementation claim links to a pinned canonical source.</li>
-<li>Every numerical result names model/artifact scope and measurement method.</li>
-<li>Hypotheses are labeled and kept separate from observations.</li>
-<li>Public artifacts use stable aliases and expose no private identity, prompt, patch, path, or raw trajectory.</li>
+<li><a href="tensors-and-layers.html">Runtime-state reference</a> — architecture-specific retained-state accounting and formulas.</li>
+<li><a href="quantization-formats.html">Format and runtime reference</a> — version-pinned encoding, grouping, metadata, and runtime/kernel details.</li>
+<li><a href="evaluation-protocol.html">Controlled evaluation protocol</a> — paired/repeated comparisons, exclusions, and evidence boundaries for public or causal claims.</li>
 </ul>
-<p>Supporting references: <a href="quantization-formats.html">artifacts, encodings, and runtimes</a> · <a href="tensors-and-layers.html">tensors and runtime state</a> · <a href="../resources.html#canonical">evidence ledger</a>.</p>
+
+<h2>Red flags</h2>
+<ul>
+<li>A filename or bit label is treated as a complete candidate description.</li>
+<li>Artifact size is treated as peak runtime memory.</li>
+<li>A smaller artifact is assumed to be faster without measurement.</li>
+<li>Different candidates are compared on different tasks or settings.</li>
+<li>Failures are silently dropped from the decision.</li>
+<li>A result for one model, runtime, and workload is described as a universal ranking.</li>
+</ul>
+
+<p>Supporting references: <a href="quantization-formats.html">artifacts, encodings, and runtimes</a> · <a href="tensors-and-layers.html">tensors and runtime state</a> · <a href="evaluation-protocol.html">controlled evaluation</a> · <a href="../resources.html#canonical">evidence ledger</a>.</p>
 <div class="terms-footer"><p><strong>Terms in this reference:</strong> <a href="glossary.html#checkpoint">Checkpoint</a> · <a href="glossary.html#inference-engine">Inference engine</a> · <a href="glossary.html#backend">Backend</a> · <a href="glossary.html#hardware">Hardware</a> · <a href="glossary.html#runtime-memory">Runtime memory</a></p></div>
 </main>
-<nav class="course-nav" aria-label="Footer"><a href="../index.html">← Course home</a><a href="quantization-formats.html">Format reference</a></nav>
+<nav class="course-nav" aria-label="Footer"><a href="../index.html">← Course home</a><a href="../lessons/0005-choosing-and-validating-a-quant.html">Lesson 5: Choose and validate</a></nav>
 </body>
 </html>

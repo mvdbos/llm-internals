@@ -10,13 +10,12 @@
 <div class="table-scroll" role="region" aria-label="Three format-label categories" tabindex="0"><p class="scroll-hint">Scroll horizontally to inspect every category.</p><table><caption>Representative implementation examples. Exact version-pinned details and sources live in the optional format reference.</caption><thead><tr><th scope="col">Example</th><th scope="col">Category</th><th scope="col">Does not establish</th></tr></thead><tbody><tr><th scope="row"><a href="../reference/glossary.html#gguf" class="glossary-link">GGUF</a></th><td>Artifact/container</td><td>Encoding of every tensor or runtime performance</td></tr><tr><th scope="row"><code>Q4_K_M</code></th><td>Model-file recipe</td><td>One universal four-bit tensor representation</td></tr><tr><th scope="row">MLX affine 8-bit/group 64</th><td>Quantization configuration</td><td>GGML <code>Q8_0</code>, retained-state precision, or universal compatibility</td></tr></tbody></table></div>
 <p>Those categories answer different questions. An artifact packages tensors and metadata. A recipe can assign different encodings to different tensor roles. A quantization configuration describes a particular target, mapping, code width, and grouping. None of them names the <a href="../reference/glossary.html#inference-engine" class="glossary-link">inference engine</a> that must load and execute the candidate.</p>
 <h2>2. Inspect fields, not just filenames</h2>
-<p>Use this fictional configuration record as a reading exercise:</p><pre><code>checkpoint: selected-checkpoint-revision
-artifact/container: GGUF
-quantized target: eligible weights
-encoding/recipe and grouping: Q4_K_M; inspect tensor metadata
-runtime/backend version: named-runtime revision
-intended hardware: declared device</code></pre>
-<p>From this record you can describe the candidate. You still cannot conclude that it fits with enough context, uses efficient kernels, is fast enough, or preserves task quality. The memory lesson established what to measure for fit; the choice lesson shows how to validate compatible candidates.</p>
+<p>Try this short fictional listing before reading the answer:</p><pre><code>download: assistant-model-Q4_K_M.gguf
+converter note: eligible weight tensors; recipe Q4_K_M
+runner: runtime-a rev-7
+machine: declared-device</code></pre>
+<p><strong>Your turn:</strong> write a six-field description: checkpoint; artifact/container; quantized target; encoding/recipe and grouping; runtime/backend version; intended hardware. Then list what the listing does <em>not</em> establish about fit, speed, and quality.</p>
+<div class="callout"><div class="callout-title">Worked answer</div><p>The artifact/container is GGUF. The recipe is <code>Q4_K_M</code>, but the listing does not show every tensor encoding or grouping. It says eligible weights are the target, names one runtime revision and an intended machine, but leaves the checkpoint revision, context/headroom fit, kernel efficiency, measured speed, and workload quality unproven.</p></div>
 <h2>3. Produce a complete candidate description</h2><pre><code>checkpoint
 + artifact/container
 + quantized target

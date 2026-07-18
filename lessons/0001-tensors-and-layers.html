@@ -71,59 +71,19 @@
 <p>The <strong>weights</strong> are the "knowledge" of the layer — they're what the model learned during training. When you download an LLM, you're downloading billions of these weight numbers.</p>
 
 <div class="callout">
-  <div class="callout-title">🧠 Key insight</div>
-  <p>The entire "intelligence" of an LLM lives in its weights. There's no database, no lookup table, no magic — just billions of carefully tuned numbers that, when multiplied and added together in the right sequence, produce coherent text.</p>
+  <div class="callout-title">Key idea</div>
+  <p>Weights are the learned numbers that a layer uses when it transforms its input. A model stores many of them across its layers. Quantization changes how selected stored weights are represented; it does not change the basic job of the layers.</p>
 </div>
 
-<h2>How layers stack into an LLM</h2>
-
-<p>An LLM is a <strong>stack of layers</strong>. Like this:</p>
-
-<pre><code>
-Words → [Embedding layer] → [Layer 1] → [Layer 2] → ... → [Layer N] → [Output layer] → Next word
-         (words→numbers)     (transformer blocks — the "thinking")      (numbers→word predictions)
-</code></pre>
-
-<p>Let's break each part down:</p>
-
-<table>
-  <caption>The three kinds of layers in a typical LLM</caption>
-  <thead>
-  <tr><th scope="col">Part</th><th scope="col">What it does</th><th scope="col">ELI5</th></tr>
-  </thead>
-  <tbody>
-  <tr>
-    <td><a href="../reference/glossary.html#embedding-layer" class="glossary-link">Embedding layer</a></td>
-    <td>Converts each word into a tensor (a vector of ~4096 or ~8192 numbers)</td>
-    <td>Turns "cat" into a fingerprint of numbers that captures what "cat" means</td>
-  </tr>
-  <tr>
-    <td><a href="../reference/glossary.html#transformer" class="glossary-link">Transformer</a> layers</td>
-    <td>The bulk of the model. Each layer mixes information between words and transforms the representations. A 7B model might have 32 of these.</td>
-    <td>32 rounds of mixing information between words to build up context</td>
-  </tr>
-  <tr>
-    <td><a href="../reference/glossary.html#output-layer" class="glossary-link">Output layer</a></td>
-    <td>Converts the final tensor back into a probability for each possible next word</td>
-    <td>After all the processing: "the next word is probably 'sat'"</td>
-  </tr>
-  </tbody>
-</table>
+<h2>From input to output</h2>
+<p>An LLM applies a sequence of layers to numeric input representations. Each layer uses stored weights to transform those numbers, and later layers use the resulting values. For this course, the important point is simple: weights are stored numbers, and changing their representation can change storage and approximation.</p>
 
 <h2>Why this matters for quantization</h2>
-
-<p>Every one of those layers stores its <strong>weights as numbers</strong> — floating-point numbers that take up 16 or 32 bits each. In a 7 billion <a href="../reference/glossary.html#parameter" class="glossary-link">parameter</a> model:</p>
-
-<ul>
-  <li>At <strong>16-bit</strong> (<a href="../reference/glossary.html#fp16" class="glossary-link">FP16</a>): 7B × 2 bytes = <strong>14 GB</strong></li>
-  <li>At <strong>4-bit</strong> (Q4): 7B × 0.5 bytes = <strong>3.5 GB</strong></li>
-</ul>
-
-<p><a href="../reference/glossary.html#quantization" class="glossary-link">Quantization</a> compresses those weight numbers — from 16 bits down to 8 bits, 4 bits, or even lower. The tradeoff: fewer bits = less memory, but each weight is <em>slightly fuzzier</em>. Some layers care more about precision than others. That's what we'll explore next.</p>
+<p><a href="../reference/glossary.html#quantization" class="glossary-link">Quantization</a> represents selected stored weights with a more compact numeric encoding. Fewer code bits can reduce weight storage, but the reconstructed values are approximations. This is a simplified weight-code illustration, not a model-file or runtime-memory forecast: real artifacts also contain reconstruction metadata and other components.</p>
 
 <div class="callout">
-  <div class="callout-title">🔗 What's next?</div>
-  <p>In <a href="0002-how-quantization-works.html">Lesson 2: How Quantization Works</a> we'll see exactly what happens when you shrink 16 bits into 4 bits, and why it usually works better than you'd expect.</p>
+  <div class="callout-title">What's next?</div>
+  <p>In <a href="0002-how-quantization-works.html">Lesson 2: How Quantization Works</a>, you will see what approximation and shared metadata change, and why usefulness must be checked on the intended workload.</p>
 </div>
 
 <h2>Quiz: Test yourself</h2>
@@ -139,11 +99,11 @@ Words → [Embedding layer] → [Layer 1] → [Layer 2] → ... → [Layer N] �
 </fieldset>
 
 <fieldset class="quiz-question" data-quiz data-retry="true" id="quiz2">
-<legend>2. A 7B parameter model at 16-bit uses roughly 14 GB. About how much at 4-bit?</legend>
-<button type="button" class="quiz-option" data-correct="false" data-explanation="4-bit uses a quarter of the bits of 16-bit, so it uses roughly a quarter of the memory, not half.">~7 GB (half).</button>
-<button type="button" class="quiz-option" data-correct="true" data-explanation="4 bits is one quarter of 16 bits, so 14 GB ÷ 4 ≈ 3.5 GB.">~3.5 GB (a quarter).</button>
-<button type="button" class="quiz-option" data-correct="false" data-explanation="4-bit compression is more aggressive than this — 1.75 GB would be 2-bit territory.">~1.75 GB (an eighth).</button>
-<button type="button" class="quiz-option" data-correct="false" data-explanation="4-bit quantization is a well-established technique — it really does compress to roughly a quarter of the 16-bit size.">~10 GB — you can't compress that much.</button>
+<legend>2. What does weight quantization change first?</legend>
+<button type="button" class="quiz-option" data-correct="false" data-explanation="Quantization changes the stored representation, not the sequence of layers itself.">The order in which the model's layers run.</button>
+<button type="button" class="quiz-option" data-correct="true" data-explanation="Quantization represents selected stored weights with a compact numeric encoding, then reconstructs approximations when needed.">How selected stored weights are represented.</button>
+<button type="button" class="quiz-option" data-correct="false" data-explanation="Runtime memory also depends on retained state and temporary allocations, which the next lessons separate.">Only the model's peak runtime memory.</button>
+<button type="button" class="quiz-option" data-correct="false" data-explanation="A quantized artifact still contains learned weights; it does not add a separate database.">Whether the model has a separate fact database.</button>
 <p class="quiz-feedback" role="status" tabindex="-1"></p>
 <button type="button" class="quiz-reset" hidden>Try again</button>
 </fieldset>
@@ -175,11 +135,6 @@ Words → [Embedding layer] → [Layer 1] → [Layer 2] → ... → [Layer N] �
     <a href="../reference/glossary.html#layer">Layer</a> ·
     <a href="../reference/glossary.html#weight">Weight</a> ·
     <a href="../reference/glossary.html#bias">Bias</a> ·
-    <a href="../reference/glossary.html#embedding-layer">Embedding layer</a> ·
-    <a href="../reference/glossary.html#transformer">Transformer</a> ·
-    <a href="../reference/glossary.html#output-layer">Output layer</a> ·
-    <a href="../reference/glossary.html#parameter">Parameter</a> ·
-    <a href="../reference/glossary.html#fp16">FP16</a> ·
     <a href="../reference/glossary.html#quantization">Quantization</a>
   </p>
 </div>

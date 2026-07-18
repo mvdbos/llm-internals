@@ -3,239 +3,99 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Learn quantization as a portable encode-store-decode process, including metadata overhead, round-trip error, and workload validation.">
+<meta name="description" content="Learn how quantization stores approximate model weights with compact codes and shared metadata.">
 <title>Lesson 2: How Quantization Actually Works</title>
 <link rel="stylesheet" href="../assets/style.css">
 </head>
 <body>
 <nav class="course-nav" aria-label="Lesson navigation"><a href="0001-tensors-and-layers.html">← Previous: Tensors &amp; Layers</a><a href="../index.html">Course home</a><a href="0003-reading-quantization-formats.html">Next: Formats and runtimes →</a></nav>
 <main>
-<p class="lesson-progress">Lesson 2 of 4 published · ~15 min</p>
+<p class="lesson-progress">Lesson 2 of 4 published · ~9 min</p>
 <h1>Lesson 2: How Quantization Actually Works</h1>
-<p>Every <a href="../reference/glossary.html#weight" class="glossary-link">weight</a> in an LLM is stored as a number. At <a href="../reference/glossary.html#fp16" class="glossary-link">FP16</a>, each number uses <strong>16 bits</strong> (2 bytes). <a href="../reference/glossary.html#quantization" class="glossary-link">Quantization</a> asks: what if we stored each weight in <strong>fewer bits</strong>?</p>
+<p>Every <a href="../reference/glossary.html#weight" class="glossary-link">weight</a> is stored as a number. At <a href="../reference/glossary.html#fp16" class="glossary-link">FP16</a>, each number uses 16 bits. <a href="../reference/glossary.html#quantization" class="glossary-link">Quantization</a> asks whether the model can store an approximation in fewer bits and still be useful for your work.</p>
 
 <table>
-  <caption>Fewer bits means fewer distinct values — the fundamental tradeoff</caption>
-  <thead>
-  <tr><th scope="col">Format</th><th scope="col">Bits per weight</th><th scope="col">Distinct values</th><th scope="col">Analogy</th></tr>
-  </thead>
-  <tbody>
-  <tr><td>FP16</td><td>16</td><td>65,536 (in any range)</td><td>Measuring to the millimetre</td></tr>
-  <tr><td>Q8 (8-bit)</td><td>8</td><td>256</td><td>Measuring to the centimetre</td></tr>
-  <tr><td>Q4 (4-bit)</td><td>4</td><td>16</td><td>Measuring to the nearest 10 cm</td></tr>
-  <tr><td>Q2 (2-bit)</td><td>2</td><td>4</td><td>Measuring to the nearest half-metre</td></tr>
-  </tbody>
-</table>
-
-<p>Think of it like a photo. The original has millions of colours (FP16). Convert to 256 colours (Q8) — it looks almost the same. Convert to 16 colours (Q4) — slightly posterised but still recognisable. Convert to 4 colours (Q2) — barely recognisable. Quantization is the same tradeoff for model weights.</p>
-
-<h2>1. The core idea: block-wise scaling</h2>
-
-<p>You can't just round 0.0234 to 0 and −0.891 to −1 and call it done. That would destroy the weights. Instead, quantization groups weights into blocks and stores a shared <a href="../reference/glossary.html#scale-factor" class="glossary-link">scale factor</a> and <a href="../reference/glossary.html#offset" class="glossary-link">offset</a> for each block:</p>
-
-<pre><code>original ≈ scale × quantized_value + offset</code></pre>
-
-<p>Where:</p>
-<ul>
-  <li><strong>quantized_value</strong> = a small integer (0–15 for 4-bit, 0–255 for 8-bit)</li>
-  <li><strong>scale</strong> = a single FP16 number that sets the spacing between levels (e.g. 0.1033)</li>
-  <li><strong>offset</strong> = aligns the integer grid to the data (sometimes implemented via a <a href="../reference/glossary.html#zero-point" class="glossary-link">zero point</a>)</li>
-</ul>
-
-<p>The scale and offset stay in full precision. Only the integers are cheap. Store 32 weights as 4-bit integers plus one FP16 scale and one FP16 offset:</p>
-
-<pre><code>Storage: 32 × 4 bits  +  16 bits  +  16 bits  =  160 bits  =  5.0 bits/weight</code></pre>
-
-<p>That's still 3.2× smaller than the original 16 bits/weight. With 128-weight blocks you approach 4.25 bits/weight — the overhead shrinks as blocks get larger. This is why <a href="../reference/glossary.html#effective-bits-per-weight" class="glossary-link">effective bits per weight</a> is usually higher than the nominal code width.</p>
-
-<h3>A concrete walkthrough</h3>
-
-<p>One weight through the encode–decode cycle:</p>
-
-<pre><code>Original weight: 0.31
-Group range: min = −0.88, max = 0.67
-Total span: 0.67 − (−0.88) = 1.55
-
-Scale = 1.55 ÷ 15 = 0.1033 per level
-Offset = −0.88
-
-Encoding: 0.31 → integer
-  int = round((0.31 − offset) ÷ scale) = round(1.19 ÷ 0.1033) = round(11.5)
-  → stored as int 12
-
-Decoding: int 12 → float
-  value = scale × 12 + offset = 1.240 + (−0.88) = 0.36
-
-Error: 0.36 − 0.31 = 0.05 (off by 5 hundredths)</code></pre>
-
-<p>A single weight is off by 0.05. That might seem like a lot — but the model has billions of weights, each carrying a tiny bit of redundant information. A small per-weight error doesn't catastrophically change the output; it adds a faint layer of noise. The model is robust to this because it learned to be during training (through techniques like dropout and weight decay).</p>
-
-<h2>2. Why blocks? Why not one scale per layer?</h2>
-
-<p>If scale factors are the trick, why not use them differently? There are only three options:</p>
-
-<table>
-  <caption>The three possible scaling strategies — only one works well</caption>
-  <thead>
-  <tr><th scope="col">Strategy</th><th scope="col">Compression</th><th scope="col">Accuracy</th><th scope="col">Verdict</th></tr>
-  </thead>
-  <tbody>
-  <tr>
-    <td>One scale per weight</td>
-    <td>None — the scale is FP16, so you're back to 16 bits per weight</td>
-    <td>Perfect</td>
-    <td>Pointless</td>
-  </tr>
-  <tr>
-    <td>One scale per layer</td>
-    <td>Maximum — one scale for millions of weights</td>
-    <td>Terrible — weights in a layer span very different ranges; one scale can't capture both ends well</td>
-    <td>Too coarse</td>
-  </tr>
-  <tr>
-    <td>One scale per block (e.g. 32 weights)</td>
-    <td>Good — scale overhead is small relative to the weight savings</td>
-    <td>Good — 32 neighbouring weights usually live in a similar range</td>
-    <td><strong>The sweet spot</strong></td>
-  </tr>
-  </tbody>
-</table>
-
-<p>Block size is a tunable parameter. A smaller <a href="../reference/glossary.html#group-size" class="glossary-link">group size</a> adapts more closely to local value ranges, reducing reconstruction error — but it repeats metadata more often. A larger group amortises metadata over more values but can force outliers and small values to share one coarse mapping. The next sections make this precise.</p>
-
-<h2>3. One complete two-bit affine round trip</h2>
-<p>Consider one group containing eight real values:</p>
-<pre><code>original = [-1.00, -0.70, -0.40, -0.10, 0.20, 0.50, 0.70, 0.90]</code></pre>
-<p>Use four codes, <code>0, 1, 2, 3</code>. The minimum is −1.00 and the maximum is 0.90, so the span is 1.90. Three equal intervals cover four levels:</p>
-<pre><code>scale = (maximum - minimum) ÷ (number_of_levels - 1)
-      = (0.90 - (-1.00)) ÷ 3
-      = 0.633333…
-
-encode(x)      = round((x - minimum) ÷ scale)
-reconstruct(q) = minimum + q × scale</code></pre>
-<div class="table-scroll" role="region" aria-label="Quantization round-trip example" tabindex="0">
-<p class="scroll-hint">Scroll horizontally to inspect every calculation.</p>
-<table>
-<caption>Pedagogical affine two-bit round trip for one eight-value group; values calculated in this lesson, not empirical model evidence</caption>
-<thead><tr><th scope="col">Original value</th><th scope="col">Stored code</th><th scope="col">Reconstructed value</th><th scope="col">Signed error</th><th scope="col">Absolute error</th></tr></thead>
+<caption>A simplified code-count comparison. Floating-point values are unevenly spaced, so FP16 is not 65,536 evenly spaced values in every range.</caption>
+<thead><tr><th scope="col">Stored representation</th><th scope="col">Code bits</th><th scope="col">Possible codes</th><th scope="col">Practical intuition</th></tr></thead>
 <tbody>
-<tr><th scope="row">−1.00</th><td>0</td><td>−1.0000</td><td>0.0000</td><td>0.0000</td></tr>
-<tr><th scope="row">−0.70</th><td>0</td><td>−1.0000</td><td>−0.3000</td><td>0.3000</td></tr>
-<tr><th scope="row">−0.40</th><td>1</td><td>−0.3667</td><td>+0.0333</td><td>0.0333</td></tr>
-<tr><th scope="row">−0.10</th><td>1</td><td>−0.3667</td><td>−0.2667</td><td>0.2667</td></tr>
-<tr><th scope="row">0.20</th><td>2</td><td>0.2667</td><td>+0.0667</td><td>0.0667</td></tr>
-<tr><th scope="row">0.50</th><td>2</td><td>0.2667</td><td>−0.2333</td><td>0.2333</td></tr>
-<tr><th scope="row">0.70</th><td>3</td><td>0.9000</td><td>+0.2000</td><td>0.2000</td></tr>
-<tr><th scope="row">0.90</th><td>3</td><td>0.9000</td><td>0.0000</td><td>0.0000</td></tr>
+<tr><th scope="row">FP16</th><td>16</td><td>Many unevenly spaced floating-point values</td><td>Fine detail across a wide range</td></tr>
+<tr><th scope="row">8-bit codes</th><td>8</td><td>256</td><td>Smaller steps than lower-bit codes</td></tr>
+<tr><th scope="row">4-bit codes</th><td>4</td><td>16</td><td>Fewer reconstruction choices</td></tr>
+<tr><th scope="row">2-bit codes</th><td>2</td><td>4</td><td>Very coarse reconstruction choices</td></tr>
 </tbody>
 </table>
-</div>
-<p>The round trip has mean absolute error <code>0.1375</code> and mean squared error approximately <code>0.032639</code> for these eight values. Those numbers describe this group only; they do not tell us whether a full model's outputs remain useful.</p>
+<p>Think of a photo with fewer available colours: reducing choices saves space, but can erase detail. Quantization makes the same trade-off for stored weight values. The label tells you a storage scheme, not whether the resulting model is good enough for a particular workload.</p>
 
-<h2>4. Metadata changes the true storage cost</h2>
-<p>Eight two-bit codes need sixteen payload bits. But the group also needs enough metadata to reconstruct the values. For many groups:</p>
-<pre><code>total storage
-= value_code_bits
-+ scale/offset/codebook metadata
-+ alignment and tensor metadata
-+ any values kept in another format</code></pre>
-<p>A smaller group size can adapt more closely to local value ranges, often reducing reconstruction error, but it repeats metadata more often. A larger group amortizes metadata over more values but can force outliers and small values to share one coarse mapping.</p>
-<p>That is why effective bits per weight can be higher than the nominal code width. The relevant calculation counts codes, metadata, and exceptions under one explicit accounting rule.</p>
-<p>Storage accounting also records the data type of each component: packed-code storage, scale dtype, offset/bias or zero-point dtype, codebook dtype, and the dtypes of any unquantized exceptions. Two groups with the same nominal code width can therefore have different effective storage.</p>
+<h2>1. Share a mapping across a block</h2>
+<p>Rather than rounding every value onto one global grid, many schemes group values and store a shared <a href="../reference/glossary.html#scale-factor" class="glossary-link">scale factor</a> and <a href="../reference/glossary.html#offset" class="glossary-link">offset</a>. A pedagogical affine mapping is:</p>
+<pre><code>original ≈ scale × stored_code + offset</code></pre>
+<p>In this pedagogical example, scale and offset are stored in FP16. The low-bit code stores the position on the small grid; shared metadata says how to reconstruct it. Some implementations use an integer <a href="../reference/glossary.html#zero-point" class="glossary-link">zero point</a> instead of storing an offset directly.</p>
 
-<h2>5. Compare mapping families</h2>
-<div class="table-scroll" role="region" aria-label="Portable mapping families" tabindex="0">
-<p class="scroll-hint">Scroll horizontally to compare mapping assumptions.</p>
+<h3>One weight: encode → store → reconstruct → compare</h3>
+<pre><code>Group range: minimum = -0.88, maximum = 0.67
+Four-bit codes provide 16 levels, so there are 15 intervals.
+scale  = (0.67 - (-0.88)) / 15 = 0.1033
+offset = -0.88
+
+Original weight = 0.31
+stored_code = round((0.31 - offset) / scale)
+            = round(11.5) = 12
+reconstructed = scale × 12 + offset = 0.36
+error = 0.36 - 0.31 = 0.05</code></pre>
+<p>The reconstructed value is close, not identical. That local error is useful for checking the mapping, but it does not prove that the model will preserve task quality. Tolerance depends on the model, which values were changed, the encoding, and the workload.</p>
+
+<h2>2. Why blocks are a trade-off</h2>
+<p>One mapping per value would repeat too much metadata. One mapping for a huge collection of values can be too coarse when its values have very different ranges. A <a href="../reference/glossary.html#group-size" class="glossary-link">group size</a> sits between those extremes: smaller groups can fit local ranges more closely, while larger groups repeat metadata less often. Neither is automatically better; the scheme balances reconstruction detail against storage overhead.</p>
+
 <table>
-<caption>Implementation-independent mapping categories</caption>
-<thead><tr><th scope="col">Mapping family</th><th scope="col">Core idea</th><th scope="col">Useful question</th></tr></thead>
+<caption>One practical group-size trade-off</caption>
+<thead><tr><th scope="col">Choice</th><th scope="col">Likely benefit</th><th scope="col">Likely cost</th></tr></thead>
 <tbody>
-<tr><th scope="row"><a href="../reference/glossary.html#symmetric-quantization" class="glossary-link">Symmetric linear</a></th><td>Levels are centered around zero and share a scale</td><td>Is the value distribution roughly balanced around zero?</td></tr>
-<tr><th scope="row">Affine linear</th><td>A scale plus offset shifts the representable range</td><td>Does the group need an asymmetric range?</td></tr>
-<tr><th scope="row">Floating-like</th><td>Codes allocate range and precision through exponent/significand structure</td><td>How are extreme magnitudes and small values represented?</td></tr>
-<tr><th scope="row">Codebook/nonuniform</th><td>Codes index a chosen set of reconstruction values</td><td>How was the codebook fitted, and what metadata is required?</td></tr>
-<tr><th scope="row">Mixed precision</th><td>Different tensors or operations use different encodings</td><td>Which exceptions exist, and how were they selected?</td></tr>
+<tr><th scope="row">Smaller group</th><td>Mapping can follow a local range more closely</td><td>Scale and offset metadata repeat more often</td></tr>
+<tr><th scope="row">Larger group</th><td>Metadata is shared across more values</td><td>One coarse mapping may fit some values poorly</td></tr>
 </tbody>
 </table>
-</div>
-<h3>Symmetric parameterization</h3>
-<p>A symmetric linear mapping centers levels around zero and normally has no separate offset:</p>
-<pre><code>scale = max(|x|) ÷ q_max
-q     = clip(round(x ÷ scale), −q_max, q_max)
-x_hat = scale × q</code></pre>
-<p>Zero reconstructs exactly, while an asymmetric group may leave part of the code range poorly used.</p>
-<h3>Affine parameterization</h3>
-<p>An <a href="../reference/glossary.html#affine-quantization" class="glossary-link">affine mapping</a> shifts the grid with a zero point <code>z</code> (or an algebraically equivalent offset):</p>
-<pre><code>q     = clip(round(x ÷ scale) + z, q_min, q_max)
-x_hat = scale × (q − z)</code></pre>
-<p>The scale controls spacing; the zero point controls alignment. They are distinct parameters. The toy calculation above writes the same idea using the group's minimum as an explicit reconstruction offset.</p>
 
-<h2>6. Measure error at more than one level</h2>
-<p>A low tensor reconstruction error is useful evidence, but it is not the final objective. For a dot product <code>y = Σᵢ(wᵢaᵢ)</code>, replacing each weight with <code>wᵢ + errorᵢ</code> gives:</p>
-<pre><code>y_hat − y = Σᵢ(errorᵢ × activationᵢ)</code></pre>
-<p>Positive and negative terms can partly cancel, which helps explain why nonzero local errors need not produce the same output error. Cancellation is not guaranteed: a large activation can amplify one weight error, aligned errors can add, and outliers or sensitive directions can dominate an average. Later normalization, nonlinearities, residual paths, routing, and repeated generation can shrink, amplify, or redirect the perturbation.</p>
-<div class="table-scroll" role="region" aria-label="Quantization error levels" tabindex="0">
-<p class="scroll-hint">Scroll horizontally to compare evidence levels.</p>
-<table>
-<caption>Error metrics answer different questions</caption>
-<thead><tr><th scope="col">Level</th><th scope="col">Example metric</th><th scope="col">What it can establish</th><th scope="col">What it cannot establish alone</th></tr></thead>
-<tbody>
-<tr><th scope="row">Value/group</th><td>Maximum error, MAE, MSE</td><td>How closely one tensor group reconstructs</td><td>End-to-end task quality</td></tr>
-<tr><th scope="row">Layer/output</th><td>Cosine similarity, output error, distribution shift</td><td>How selected intermediate outputs changed</td><td>Whether errors matter to users</td></tr>
-<tr><th scope="row">Language modeling</th><td>Negative log-likelihood or perplexity on a named dataset</td><td>Predictive change on that distribution</td><td>Every downstream or long-horizon behavior</td></tr>
-<tr><th scope="row">Workload</th><td>Task success, rubric score, verifier result, latency, memory</td><td>Trade-offs on the actual decision target</td><td>Universal behavior outside the measured scope</td></tr>
-</tbody>
-</table>
-</div>
+<h2>3. Count codes and metadata together</h2>
+<p>Suppose 32 values use four-bit codes plus one FP16 scale and one FP16 offset:</p>
+<pre><code>32 × 4 code bits + 16 scale bits + 16 offset bits
+= 160 bits total
+= 5.0 bits per stored value</code></pre>
+<p>The nominal code width is four bits, but reconstruction metadata raises the <a href="../reference/glossary.html#effective-bits-per-weight" class="glossary-link">effective bits per weight</a>. A real artifact can also contain alignment, tensor metadata, or values stored differently, so measure the actual candidate rather than treating a filename as a full memory forecast.</p>
 
-<h2>7. Why approximation can be tolerable—and why that is not guaranteed</h2>
-<p>Neural computations combine many values, and trained representations can have redundancy. Small local perturbations may leave a selected output unchanged. But tolerance depends on the checkpoint, tensor role, magnitude distribution, architecture, mapping, workload, and runtime implementation. Outliers, repeated state use, routing boundaries, or decision thresholds can make some errors matter more than their average magnitude suggests.</p>
-<p>The correct conclusion is not “models tolerate a particular bit width.” It is:</p>
-<ol>
-<li>verify the exact encoding and target;</li>
-<li>measure storage and runtime behavior;</li>
-<li>measure reconstruction or output diagnostics;</li>
-<li>evaluate paired tasks from the intended workload;</li>
-<li>report uncertainty and scope.</li>
-</ol>
+<h2>4. What this calculation can—and cannot—tell you</h2>
+<p>The round trip shows a local approximation. It can help explain why compact storage is possible. It cannot rank candidates by chat quality, coding reliability, speed, compatibility, or peak runtime memory. Those are separate questions that depend on the complete artifact, the inference engine, the hardware, and your intended work.</p>
+<p>For optional depth on mapping families and implementation-specific formats, see the <a href="../reference/quantization-formats.html">quantization formats reference</a>.</p>
 
-<div class="callout"><div class="callout-title">The same mechanics, different implementations</div><p>GGUF is an artifact/container family, llama.cpp <code>Q8_0</code> and MLX affine 8-bit name different quantization schemes, MLX is a framework/ecosystem, and vLLM and SGLang are inference runtimes. These category labels do not define one interchangeable “8-bit” format. <a href="0003-reading-quantization-formats.html">Lesson 3</a> covers the versioned implementation details.</p></div>
+<div class="callout"><div class="callout-title">The same mechanics, different implementations</div><p>Different implementations give their artifacts, mappings, and runtimes different names. The shared idea here is compact codes plus reconstruction metadata. The next lesson explains how to identify a real candidate precisely before comparing it.</p></div>
 
-<h2>Quiz: reason through the round trip</h2>
+<h2>Quiz: reason through the trade-off</h2>
 <fieldset class="quiz-question" data-quiz data-retry="true" id="quiz1">
-<legend>1. Why can effective storage exceed a nominal two-bit code width?</legend>
-<button type="button" class="quiz-option" data-correct="false" data-explanation="Rounding changes reconstructed values, but it does not by itself add stored bits beyond the declared codes.">Rounding automatically stores a second copy of each original value.</button>
-<button type="button" class="quiz-option" data-correct="true" data-explanation="Codes require reconstruction metadata, and some tensors or values may use other encodings; all counted storage contributes to effective bpw.">Groups need metadata, and some values may be stored as exceptions.</button>
-<button type="button" class="quiz-option" data-correct="false" data-explanation="Sequence length affects runtime state, not the encoded weight payload counted by this question.">Longer prompts increase the bit width of every stored weight.</button>
-<p class="quiz-feedback" role="status" tabindex="-1"></p>
-<button type="button" class="quiz-reset" hidden>Try again</button>
+<legend>1. Why can effective storage exceed a nominal two-bit or four-bit code width?</legend>
+<button type="button" class="quiz-option" data-correct="false" data-explanation="Rounding changes values but does not itself store the original values again.">Each rounded value automatically keeps a second original copy.</button>
+<button type="button" class="quiz-option" data-correct="true" data-explanation="Codes need shared reconstruction metadata, and real artifacts can include other stored components.">The stored codes need metadata for reconstruction.</button>
+<button type="button" class="quiz-option" data-correct="false" data-explanation="Prompt length affects runtime state, not the stored code width of model weights.">Long prompts make every weight code wider on disk.</button>
+<p class="quiz-feedback" role="status" tabindex="-1"></p><button type="button" class="quiz-reset" hidden>Try again</button>
 </fieldset>
-
 <fieldset class="quiz-question" data-quiz data-retry="true" id="quiz2">
-<legend>2. A candidate has the lowest mean squared weight error. What follows?</legend>
-<button type="button" class="quiz-option" data-correct="false" data-explanation="A tensor-level average does not prove identical model outputs or task results.">It must match the original model on every downstream task.</button>
-<button type="button" class="quiz-option" data-correct="false" data-explanation="Speed depends on engine, kernels, hardware, and workload, not reconstruction error alone.">It must be the fastest candidate on every inference engine.</button>
-<button type="button" class="quiz-option" data-correct="true" data-explanation="The metric supports a reconstruction claim for the measured tensors; workload quality still needs paired evaluation.">It reconstructs those measured weights well; task quality remains unproven.</button>
-<p class="quiz-feedback" role="status" tabindex="-1"></p>
-<button type="button" class="quiz-reset" hidden>Try again</button>
+<legend>2. A candidate has low reconstruction error for sampled weights. What remains unproven?</legend>
+<button type="button" class="quiz-option" data-correct="false" data-explanation="A local diagnostic does not establish universal output equivalence.">It will match the original model on every task.</button>
+<button type="button" class="quiz-option" data-correct="true" data-explanation="Local reconstruction evidence must be paired with workload-appropriate validation.">Whether the model remains useful for the intended workload.</button>
+<button type="button" class="quiz-option" data-correct="false" data-explanation="Speed depends on the full runtime and hardware path, not only a reconstruction metric.">It uses the fastest possible inference path.</button>
+<p class="quiz-feedback" role="status" tabindex="-1"></p><button type="button" class="quiz-reset" hidden>Try again</button>
 </fieldset>
-
 <fieldset class="quiz-question" data-quiz data-retry="true" id="quiz3">
-<legend>3. What is the usual trade-off when the group size becomes smaller?</legend>
-<button type="button" class="quiz-option" data-correct="true" data-explanation="Smaller groups can fit local ranges more closely, while repeating scales or offsets across more groups.">Local mappings can fit better, but metadata is repeated more often.</button>
-<button type="button" class="quiz-option" data-correct="false" data-explanation="Code width is a separate setting; changing group size does not automatically double it.">Every code doubles in width, so reconstruction becomes exact.</button>
-<button type="button" class="quiz-option" data-correct="false" data-explanation="Grouping changes how metadata is shared; it does not remove the encode/decode mapping.">Reconstruction metadata disappears because each group is independent.</button>
-<p class="quiz-feedback" role="status" tabindex="-1"></p>
-<button type="button" class="quiz-reset" hidden>Try again</button>
+<legend>3. What is the usual trade-off when a group becomes smaller?</legend>
+<button type="button" class="quiz-option" data-correct="true" data-explanation="Smaller groups can fit local ranges more closely, but their mapping metadata is repeated more often.">Local mappings can fit better, but metadata repeats more often.</button>
+<button type="button" class="quiz-option" data-correct="false" data-explanation="Group size and code width are separate choices.">Every stored code automatically becomes wider.</button>
+<button type="button" class="quiz-option" data-correct="false" data-explanation="Independent groups still need their own reconstruction metadata.">Reconstruction metadata disappears entirely.</button>
+<p class="quiz-feedback" role="status" tabindex="-1"></p><button type="button" class="quiz-reset" hidden>Try again</button>
 </fieldset>
 
-<h2>References and next step</h2>
-<ul>
-<li><a href="../resources.html#canonical">High-trust quantization evaluations</a></li>
-<li><a href="../reference/quantization-decision-checklist.html">Five-step decision checklist</a></li>
-<li><a href="0003-reading-quantization-formats.html">Lesson 3: Reading Quantization Formats</a></li>
-</ul>
-<div class="terms-footer"><p><strong>Terms in this lesson:</strong> <a href="../reference/glossary.html#weight">Weight</a> · <a href="../reference/glossary.html#fp16">FP16</a> · <a href="../reference/glossary.html#quantization">Quantization</a> · <a href="../reference/glossary.html#scale-factor">Scale factor</a> · <a href="../reference/glossary.html#offset">Offset</a> · <a href="../reference/glossary.html#zero-point">Zero point</a> · <a href="../reference/glossary.html#effective-bits-per-weight">Effective bits per weight</a> · <a href="../reference/glossary.html#group-size">Group size</a> · <a href="../reference/glossary.html#affine-quantization">Affine quantization</a> · <a href="../reference/glossary.html#symmetric-quantization">Symmetric quantization</a></p></div>
+<h2>Takeaway and next step</h2>
+<p>Quantization replaces exact weight values with approximations. Blocks make that practical by sharing a little metadata across many low-bit values. Next, separate model-file size from the memory a running model actually needs.</p>
+<ul><li><a href="0003-reading-quantization-formats.html">Next: Reading Quantization Formats</a></li><li><a href="../reference/quantization-formats.html">Optional depth: Quantization formats</a></li></ul>
+<div class="terms-footer"><p><strong>Terms in this lesson:</strong> <a href="../reference/glossary.html#weight">Weight</a> · <a href="../reference/glossary.html#fp16">FP16</a> · <a href="../reference/glossary.html#quantization">Quantization</a> · <a href="../reference/glossary.html#scale-factor">Scale factor</a> · <a href="../reference/glossary.html#offset">Offset</a> · <a href="../reference/glossary.html#zero-point">Zero point</a> · <a href="../reference/glossary.html#group-size">Group size</a> · <a href="../reference/glossary.html#effective-bits-per-weight">Effective bits per weight</a></p></div>
 </main>
 <nav class="course-nav" aria-label="Lesson navigation"><a href="0001-tensors-and-layers.html">← Previous: Tensors &amp; Layers</a><a href="../index.html">Course home</a><a href="0003-reading-quantization-formats.html">Next: Formats and runtimes →</a></nav>
 <script src="../assets/quiz.js" defer></script>

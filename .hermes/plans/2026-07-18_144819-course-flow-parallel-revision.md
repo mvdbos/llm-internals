@@ -1,195 +1,230 @@
-# LLM Course Flow and Tone Revision Implementation Plan
+# Practical Local-Model Course Revision Implementation Plan
 
-> **For Hermes:** Execute the independent content tracks in parallel, then perform the structural integration and verification serially. Do not publish partial tracks.
+> **For Hermes:** Execute the five independent authoring/audit tracks in parallel Git worktrees. Integrate them on a dedicated branch, then run two parallel reviews followed by serial fixes, structural updates, validation, and deployment. Do not publish a partial course.
 
-**Goal:** Turn the current four-lesson course into a clearer learner journey—mechanics, memory, real-world format labels, then controlled evaluation—while retaining evidence discipline, glossary/a11y contracts, and the course’s concrete, approachable voice.
+**Goal:** Produce a practical first-version course that helps an amateur choose and validate the right quantization and related local-runtime settings for a model they have already selected.
 
-**Architecture:** Add a focused memory lesson between mechanics and format selection. Simplify the main paths of Lessons 2, 4, and 5; retain version-pinned format detail and advanced evaluation methodology in reference material rather than forcing them into every learner’s first pass. Preserve public paths that move by serving explicit compatibility redirects.
+**Architecture:** Keep the main path short and decision-led: foundations → quantization mechanics → memory/fit → format/runtime identification → practical choice and validation. Move exhaustive implementation catalogues and specialist evaluation protocol into reference pages. Publish the general decision method now; defer only the result-bearing controlled case study.
 
-**Tech stack:** Dependency-free static HTML/CSS/JS; `course.json` manifest; `assets/quiz.js`; Python `unittest` and `scripts/audit_course.py` validation.
+**Tech stack:** Dependency-free static HTML/CSS/JS; `course.json`; shared `assets/style.css` and `assets/quiz.js`; Python `unittest`; `scripts/audit_course.py`.
 
-## Governing mission check
+---
 
-This plan is successful only if it serves this learner:
+## 1. Governing mission
+
+The course serves this learner:
 
 > **As an amateur, I want to run the best possible local model on my hardware. Once I have selected the model, I need practical guidance to choose the right quantization and other settings that materially affect whether it fits, runs well, and remains useful for my work. I want the supporting knowledge needed to make those choices, not expert training.**
 
-For every proposed addition, rewrite, table, exercise, or reference move, the implementer must answer:
+Every main-path section must answer all three questions:
 
-1. **Which practical decision does this help the learner make?** Examples: does it fit with headroom; which artifact/runtime combination is compatible; which candidates merit testing; how should quality, memory, and speed be compared?
-2. **What is the minimum theory required for that decision?** Teach that in the main path; put implementation catalogues, source-level detail, and specialist protocols in reference/optional depth.
-3. **What would an amateur do differently after this section?** If there is no clear answer, remove it from the main lesson or turn it into reference material.
+1. **Which practical local-model decision does this support?**
+2. **What is the minimum theory needed for that decision?**
+3. **What can the learner do differently afterward?**
 
-“Best” is conditional—not a universal quant ranking. It means the best supported trade-off for the selected model, available hardware/headroom, compatible runtime, speed needs, and intended workload. Model selection itself is out of scope; this course covers the practical choices that follow it.
+If a section only demonstrates implementation expertise, enumerates formats, or rehearses specialist methodology, move it to optional/reference material.
+
+“Best” is conditional on the selected checkpoint, hardware capacity and headroom, compatible runtime, speed needs, and intended workload. The course must not invent a universal quant ranking.
+
+### Scope boundary
+
+| In scope | Out of scope unless directly required for a choice |
+|---|---|
+| Choosing quantization after selecting a base model | Choosing the base checkpoint/model |
+| Identifying artifact, quantized target, recipe, runtime, backend, and compatibility | Exhaustive inference-engine configuration |
+| File size, loaded memory, retained state, peak memory, context, and headroom | Deep architecture taxonomy and cache derivations |
+| Speed and memory on the intended hardware/runtime stack | Serving-fleet and throughput optimization |
+| Workload-appropriate quality checks | General LLM evaluation theory |
+| Settings that materially change a candidate comparison | Comprehensive prompting or sampling instruction |
+
+### Teaching order versus decision order
+
+The teaching sequence introduces implementation-independent memory concepts before the real-world format taxonomy. The practical decision checklist still runs in this order:
+
+1. Identify the concrete checkpoint, artifact, quantized target, recipe, runtime/backend, and hardware.
+2. Calculate or measure that candidate’s memory requirement and headroom.
+3. Shortlist compatible candidates that fit.
+4. Validate quality and speed in proportion to the stakes.
+5. Choose the supported trade-off and state uncertainty.
+
+Agents must not treat the learner sequence and the execution checklist as competing procedures.
 
 ---
 
-## Target learner sequence
+## 2. Target first-version course
 
-| Published order | Target path | Learner question | Intended duration |
-|---|---|---|---:|
-| 1 | `lessons/0001-tensors-and-layers.html` | What are the numbers and transformations inside an LLM? | 5 min |
-| 2 | `lessons/0002-how-quantization-works.html` | What does storing a weight with fewer bits actually do? | 8–10 min |
-| 3 | `lessons/0003-model-memory-and-context.html` | Why can a model file that fits on disk still fail to fit at runtime? | 6–8 min |
-| 4 | `lessons/0004-reading-quantization-formats.html` | What does a real quantization label identify—and what does it leave unknown? | 8–10 min |
-| 5 | `lessons/0005-measuring-quantization-quality.html` | How can I fairly choose among candidates that fit? | 8–10 min |
-| 6 | `lessons/0006-choosing-and-validating-a-quant.html` | Apply the method to controlled evidence. | Planned/evidence-gated |
+| Lesson | Final path | Practical learner question | Target duration |
+|---:|---|---|---:|
+| 1 | `lessons/0001-tensors-and-layers.html` | What are the weight numbers and transformations that quantization changes? | 5 min |
+| 2 | `lessons/0002-how-quantization-works.html` | What does storing weights with fewer bits do? | 8–10 min |
+| 3 | `lessons/0003-model-memory-and-context.html` | Will this candidate actually fit with useful context and headroom? | 6–8 min |
+| 4 | `lessons/0004-reading-quantization-formats.html` | What does this label identify, and is the artifact/runtime combination compatible? | 8–10 min |
+| 5 | `lessons/0005-choosing-and-validating-a-quant.html` | Which compatible candidate should I use, and how much validation is enough? | 9–11 min |
+| 6 | `lessons/0006-controlled-quantization-case-study.html` | What does the preregistered controlled comparison show? | Planned/evidence-gated |
 
-### Non-negotiable teaching and publication constraints
+### Publication boundary
 
-- Keep the course voice **concrete and warm, but not cutesy**. Use “you” and practical examples. Avoid ELI5 labels, slogans, compliance vocabulary, and unexplained jumps.
-- A main lesson should teach one job. Dense catalogues, protocol details, and version-pinned implementation facts belong in a reference page or clearly labeled optional material.
-- Do not weaken the evidence gate for the planned capstone. The new lesson adds a published foundation; it does not fabricate Lesson 6 results or recommendations.
-- Keep every first glossary occurrence linked with a term-specific fragment and `class="glossary-link"`; the terms footer target set must match exactly.
-- Any moved currently-public page requires a compatibility redirect (`data-course-redirect="true"`), not a dead link. A redirect should name the supported replacement and preserve the old URL.
-- Preserve the older `lessons/0003-quantization-in-practice.html` redirect; it remains a separate historical URL and must not become the new memory lesson.
+- Lessons 1–5 provide a complete practical method without requiring unpublished results.
+- Lesson 6 is a controlled case study. Its results and result-dependent recommendation remain unpublished until the evidence gate passes.
+- Lesson 5 may teach how to choose; it must not claim that a particular quant universally wins.
+- This is the first public version. **Do not create redirects, compatibility pages, or legacy routes.** Remove obsolete pre-release lesson pages and update all internal links directly.
+
+### Tone and lesson constraints
+
+- Concrete and warm, but not cutesy.
+- Use “you,” practical scenarios, and plain language.
+- Do not use ELI5 labels, institutional compliance prose, or unexplained technical jumps.
+- Each lesson teaches one job and ends with a practical next action.
+- Main lessons contain only decision-relevant detail; references retain precision and optional depth.
+- Every first glossary occurrence uses a term-specific fragment and `class="glossary-link"`.
+- Inline glossary targets and the terms footer must match exactly.
+- Quizzes use `assets/quiz.js`, semantic fieldsets, explanatory feedback, and an intentional retry path.
 
 ---
 
-# Phase 0 — Freeze the editorial contract (serial)
+# Phase 0 — Freeze and prepare parallel worktrees
 
-### Task 0.1: Record the baseline and create parallel work areas
+## Task 0.1: Record the baseline and run the current checks
 
-**Objective:** Make independent changes reviewable and prevent contributors from editing the same file.
+**Objective:** Start all tracks from the same known-good commit.
 
-**Files:**
-- Create: `docs/plans/2026-07-18-course-flow-revision-contract.md`
-- Read only: `MISSION.md`, `course.json`, `index.html`, `AGENTS.md`, all `lessons/*.html`, `reference/*.html`, `resources.html`, `QA.md`
+**Files:** Read only.
 
-**Step 1: Record repository identity and clean state**
+**Step 1: Start at the repository root**
 
-Run:
 ```bash
-cd /Users/matthijs/Projects/llm-teach
+export COURSE_REPO="$(pwd)"
+export BASE="$(git rev-parse HEAD)"
 git status --short
 git rev-parse HEAD
 ```
 
-Expected: clean worktree and a recorded baseline commit.
+Expected: clean worktree. If not clean, stop and resolve ownership before continuing.
 
-**Step 2: Write the editorial contract**
-
-Put this mission gate at the top of the contract:
-
-```markdown
-## Mission gate (required for every track)
-For each retained or newly introduced section, name:
-1. the practical local-model decision it supports;
-2. the minimum supporting knowledge it teaches; and
-3. the learner action it enables.
-
-A section that only demonstrates implementation expertise, enumerates formats, or rehearses evaluation protocol without changing a practical decision belongs in optional/reference material, not the main learner path.
-```
-
-Then create the contract with these acceptance statements:
-
-```markdown
-## Lesson 2 acceptance
-- The first screen explains fewer representable values before formulas.
-- It has one block-scale walkthrough and one metadata/group-size explanation.
-- It does not repeat the group-size trade-off.
-- It labels its numerical walkthrough as pedagogical.
-
-## Lesson 3 acceptance
-- A learner can distinguish file size, loaded weights, retained runtime state, temporary workspace, and peak memory.
-- Conventional KV cache is explicitly architecture-specific.
-- No runtime/product names are required to understand the lesson.
-
-## Lesson 4 acceptance
-- The learner classifies a real label by category before seeing a broad catalogue.
-- The main lesson uses at most three representative format examples.
-- Detailed version-pinned cataloguing remains in reference material.
-
-## Lesson 5 acceptance
-- It begins with a decision between two candidates, not an evidence taxonomy.
-- It teaches matched tasks, task-quality-first metrics, repeated trials when relevant, and transparent failure handling.
-- SWE-specific F2P/P2P/reward detail is optional/reference material, not a prerequisite for general learners.
-```
-
-**Step 3: Create separate branches/worktrees or isolated agent tasks**
-
-Allocate non-overlapping ownership:
-
-| Track | Owns | Must not edit |
-|---|---|---|
-| A | Current Lesson 2 only | manifest, index, navigation, other lessons |
-| B | New memory-lesson draft only | manifest, index, existing lessons |
-| C | Current Lesson 3 plus quantization-format reference only | manifest, index, Lessons 2/4 |
-| D | Current Lesson 4 plus optional evaluation reference only | manifest, index, Lessons 2/3 |
-| E | Integration after A–D are approved | all structural files; no independent prose redesign |
-
-**Step 4: Commit the contract**
+**Step 2: Run baseline verification**
 
 ```bash
-git add docs/plans/2026-07-18-course-flow-revision-contract.md
-git commit -m "docs: define course flow revision contract"
+python3 -m unittest discover -s tests -v
+python3 scripts/audit_course.py --allow-planned-lessons
+python3 -m py_compile scripts/audit_course.py scripts/analyze_case_study.py
+node --check assets/quiz.js
+git diff --check
 ```
+
+Expected: every command exits 0.
+
+## Task 0.2: Create exact parallel branches and worktrees
+
+**Objective:** Give each track exclusive file ownership.
+
+```bash
+export WORKTREE_ROOT="$(dirname "$COURSE_REPO")/llm-course-revision-worktrees"
+mkdir -p "$WORKTREE_ROOT"
+
+git worktree add "$WORKTREE_ROOT/track-a" -b course/lesson-2 "$BASE"
+git worktree add "$WORKTREE_ROOT/track-b" -b course/memory-lesson "$BASE"
+git worktree add "$WORKTREE_ROOT/track-c" -b course/format-lesson "$BASE"
+git worktree add "$WORKTREE_ROOT/track-d" -b course/choice-lesson "$BASE"
+git worktree add "$WORKTREE_ROOT/track-e" -b course/mission-audit "$BASE"
+```
+
+### Ownership
+
+| Track | Exclusive write ownership |
+|---|---|
+| A | `lessons/0002-how-quantization-works.html`, `docs/reviews/2026-07-18-lesson-2-scope-map.md` |
+| B | `lessons/0003-model-memory-and-context.html`, `docs/reviews/2026-07-18-memory-source-ledger.md` |
+| C | `lessons/0003-reading-quantization-formats.html`, `reference/quantization-formats.html`, `resources.html`, `RESOURCES.md`, track-C review note |
+| D | `lessons/0004-measuring-quantization-quality.html`, new `reference/evaluation-protocol.html`, track-D review note |
+| E | Audit-only report `docs/reviews/2026-07-18-mission-to-course-map.md` |
+
+No authoring track may edit `course.json`, `index.html`, `AGENTS.md`, `QA.md`, navigation in other lessons, learning records, filenames, or publication status. Those are integration-owned.
 
 ---
 
-# Phase 1 — Parallel editorial tracks
+# Phase 1 — Parallel Track A: Focus Lesson 2
 
-All tracks can begin from the same frozen baseline. Each output is a reviewable patch or branch. Do **not** merge, rename, or deploy yet.
+Work in `$WORKTREE_ROOT/track-a`.
 
-## Track A — Lesson 2: keep the bridge, reduce the load
+## Task A1: Write the lesson scope map
 
-### Task A.1: Create a lesson-2 scope map
+**Objective:** Lock the one learner win before editing prose.
 
-**Objective:** Identify duplicated teaching and separate core mechanics from optional detail.
+**Create:** `docs/reviews/2026-07-18-lesson-2-scope-map.md`
 
-**Files:**
-- Modify: `lessons/0002-how-quantization-works.html`
-- Create: `docs/reviews/2026-07-18-lesson-2-scope-map.md`
+Record:
 
-**Step 1: Mark the retained main path**
+- Practical decision: understand the memory/approximation trade-off before comparing quants.
+- Minimum theory: fewer levels, shared scale/offset, one encode/decode example, block metadata, local error versus task quality.
+- Learner action: explain why nominal four-bit storage is approximate and why a label alone cannot guarantee acceptable quality.
+- Material to move out: mapping-family catalogue, duplicate parameterization formulas, full evaluation taxonomy.
 
-Retain this exact instructional progression:
+Commit:
 
-1. Fewer bits → fewer available numeric levels.
-2. A shared scale/offset makes low-bit storage usable.
-3. Walk one weight through encode → stored code → reconstructed approximation.
-4. Blocks trade metadata overhead against local fit.
-5. Nominal bits are not the complete storage story.
-6. Local reconstruction error is not proof of task quality.
-
-**Step 2: Remove duplicate group-size instruction**
-
-Keep the explanation following “Why blocks?” and replace the later repeat under “Metadata changes the true storage cost” with a forward-moving line such as:
-
-```html
-<p>The storage calculation below makes that same block-size trade-off measurable: it counts both low-bit codes and their shared metadata.</p>
+```bash
+git add docs/reviews/2026-07-18-lesson-2-scope-map.md
+git commit -m "docs: define lesson 2 practical scope"
 ```
 
-Do not use the glossary link again in that later sentence; it has already been linked earlier in the lesson.
+## Task A2: Correct and scope the opening model
 
-**Step 3: Move advanced mapping taxonomy out of the main path**
+**Modify:** `lessons/0002-how-quantization-works.html`
 
-Reduce the main lesson’s “Compare mapping families” and detailed symmetric/affine equations to a short optional callout or a link to `reference/quantization-formats.html`. Retain the one concrete affine walkthrough; it is the primary worked example.
+- Keep the fewer-bits intuition before formulas.
+- Do not claim FP16 supplies 65,536 evenly spaced values “in any range.” Label the comparison as simplified and state that floating-point values are unevenly spaced.
+- Replace production-looking `Q8`, `Q4`, and `Q2` in the conceptual table with “8-bit codes,” “4-bit codes,” and “2-bit codes” unless a concrete implementation is explicitly identified.
+- State: “In this pedagogical example, scale and offset are stored in FP16.”
+- Keep one single-weight encode → store → reconstruct → compare walkthrough.
 
-**Step 4: Tighten universal claims**
+Commit:
 
-Replace claims like these with scoped wording:
+```bash
+git add lessons/0002-how-quantization-works.html
+git commit -m "docs: scope lesson 2 numeric intuition"
+```
 
-| Current idea | Replacement direction |
-|---|---|
-| FP16 has “65,536 values in any range” | Explain that floating-point values are unevenly spaced; label the initial table as a simplified intuition, not a FP16 specification. |
-| Scale and offset “stay in full precision” | “In this pedagogical example, scale and offset are stored in FP16.” |
-| Models tolerate error because of dropout/weight decay | “Models can sometimes tolerate small local perturbations because their computations combine many values; tolerance depends on the model, encoding, and workload.” |
-| Neighbouring weights “usually” share a range | “A smaller block can describe a local set of values more closely than one scale for an entire layer.” |
+## Task A3: Remove duplicate and advanced main-path material
 
-**Step 5: Keep the implementation boundary small**
+**Modify:** `lessons/0002-how-quantization-works.html`
 
-Retain one short end callout titled **“The same mechanics, different implementations.”** It may distinguish category types and link forward, but must not become a product catalogue.
+- Keep the group-size trade-off once, following “Why blocks?”
+- Replace its later duplicate with a sentence that advances to total storage accounting.
+- Move the mapping-family catalogue and duplicate symmetric/affine derivations to `reference/quantization-formats.html` by leaving a concise link/optional callout. Track C owns the reference edit; Track A only removes or compresses the lesson material and records exactly what Track C must preserve in the scope map.
+- Retain one concrete affine round trip.
+- Replace the dropout/weight-decay causal claim with scoped language: local perturbations may be tolerated, but tolerance depends on model, encoding, and workload.
+- Qualify claims about neighbouring weights and local ranges.
 
-**Step 6: Update the quiz**
+Commit:
 
-Keep three questions. They should assess:
+```bash
+git add lessons/0002-how-quantization-works.html docs/reviews/2026-07-18-lesson-2-scope-map.md
+git commit -m "docs: remove duplicate and advanced lesson 2 material"
+```
 
-- why metadata can make effective storage exceed nominal code width;
-- why a low reconstruction error does not prove task quality;
-- the group-size trade-off.
+## Task A4: Simplify the handoff and quiz
 
-**Step 7: Validate the isolated patch**
+**Modify:** `lessons/0002-how-quantization-works.html`
+
+End with this practical takeaway, adapted to the page voice:
+
+> Quantization replaces exact weight values with approximations. Blocks make that practical by sharing a little metadata across many low-bit values. Next, separate model-file size from the memory a running model actually needs.
+
+Keep three quiz questions assessing:
+
+1. why metadata raises effective storage above nominal code width;
+2. why low reconstruction error does not prove workload quality;
+3. the group-size trade-off.
+
+Do not introduce product names in the instructional spine. Keep one short implementation-boundary callout that points forward without cataloguing products.
+
+Commit:
+
+```bash
+git add lessons/0002-how-quantization-works.html
+git commit -m "docs: simplify lesson 2 takeaway and quiz"
+```
+
+## Task A5: Validate Track A
 
 ```bash
 python3 scripts/audit_course.py --allow-planned-lessons
@@ -197,46 +232,67 @@ node --check assets/quiz.js
 git diff --check
 ```
 
-Expected: all pass. Record the before/after main-section count in the scope map.
-
-**Step 8: Commit track output**
-
-```bash
-git add lessons/0002-how-quantization-works.html docs/reviews/2026-07-18-lesson-2-scope-map.md
-git commit -m "docs: focus quantization mechanics lesson"
-```
+Expected: exits 0. Record the final section count and estimated reading time in the scope map, then amend only the last track commit if needed.
 
 ---
 
-## Track B — New memory lesson draft
+# Phase 1 — Parallel Track B: Add the Memory and Context Lesson
 
-### Task B.1: Author an implementation-independent memory lesson
+Work in `$WORKTREE_ROOT/track-b`.
 
-**Objective:** Create the missing bridge between compression mechanics and format selection without restoring the overloaded old Lesson 1.
+## Task B1: Build the memory source ledger
 
-**Files:**
-- Create: `lessons/0003-model-memory-and-context.html`
-- Create: `docs/reviews/2026-07-18-memory-lesson-requirements.md`
-- Read: `reference/glossary.html`, `reference/tensors-and-layers.html`, `assets/style.css`, `assets/quiz.js`
+**Objective:** Ground the new lesson in high-trust sources rather than parametric knowledge.
 
-**Step 1: Write the single learner promise**
+**Read:**
 
-Use this opening direction:
+- `reference/tensors-and-layers.html`
+- `reference/glossary.html`
+- `resources.html`
+- `RESOURCES.md`
+- the canonical architecture/runtime sources already referenced by the course
 
-> A smaller model file helps, but file size is not the amount of memory a running model needs. To decide whether a model will fit, separate what is loaded once from what grows while you use it.
+**Create:** `docs/reviews/2026-07-18-memory-source-ledger.md`
 
-**Step 2: Use four concrete memory buckets**
+For each claim, record its source and scope:
 
-Teach only these buckets:
+| Claim | Required scope |
+|---|---|
+| Artifact size differs from loaded/peak memory | General accounting boundary, not one engine |
+| Retained state can grow with workload/context | Architecture-specific caveat included |
+| Conventional KV cache is one retained-state example | Explicitly not universal |
+| Peak memory includes working allocations and overhead | Measurement boundary stated |
 
-| Bucket | Plain-language explanation | What tends to change it |
-|---|---|---|
-| Artifact/file size | Bytes stored on disk | Encoding and included metadata |
-| Loaded weights | Parameters held ready by the inference engine | Checkpoint/encoding and loading policy |
-| Retained runtime state | Information intentionally kept as generation continues | Architecture, context length, batch, state format |
-| Temporary workspace and overhead | Short-lived working memory plus engine allocation overhead | Engine, operations, batch, execution plan |
+If an adequate high-trust source is absent, record the exact source to add during integration; do not edit shared resource files from Track B.
 
-Use a concise formula:
+Commit:
+
+```bash
+git add docs/reviews/2026-07-18-memory-source-ledger.md
+git commit -m "docs: establish memory lesson evidence scope"
+```
+
+## Task B2: Create the lesson skeleton and memory buckets
+
+**Create:** `lessons/0003-model-memory-and-context.html`
+
+Use provisional navigation while this page is outside `course.json`:
+
+- Previous: `0002-how-quantization-works.html`
+- Next: `0003-reading-quantization-formats.html`
+
+Open with:
+
+> A smaller model file helps, but file size is not the amount of memory a running model needs. To decide whether a candidate will fit, separate what is loaded once from what grows while you use it.
+
+Teach only four buckets:
+
+1. artifact/file size;
+2. loaded weights;
+3. retained runtime state;
+4. temporary workspace and runtime overhead.
+
+Use this accounting model and label it as an estimate, not a universal allocator formula:
 
 ```text
 peak runtime memory
@@ -245,31 +301,34 @@ peak runtime memory
 + temporary workspace and overhead
 ```
 
-Immediately say it is an estimate/measurement model, not a universal allocator formula.
+Commit:
 
-**Step 3: Add one concrete scenario**
+```bash
+git add lessons/0003-model-memory-and-context.html
+git commit -m "docs: add model memory lesson foundation"
+```
 
-Use fictional, rounded values—not a real product or personal hardware:
+## Task B3: Add the practical scenario and fit checklist
+
+**Modify:** `lessons/0003-model-memory-and-context.html`
+
+Use one fictional scenario:
 
 ```text
 Same 4 GB artifact
-Run A: short prompt → lower retained state → lower peak
-Run B: long prompt → more retained state → higher peak
+Short-context run → lower workload-dependent memory → lower peak
+Long-context run → higher workload-dependent memory → higher peak
 ```
 
-Make the conclusion explicit: the parameter file did not grow; the workload-dependent part did.
+Explain that the file and loaded parameters did not grow; the workload-dependent allocation changed.
 
-**Step 4: Explain context carefully**
-
-Use “retained runtime state” as the primary term. Introduce KV cache only as a linked, architecture-specific example:
+Introduce KV cache only as an architecture-specific example:
 
 > In conventional cached attention, retained state is often a KV cache. Other architectures retain different state, so do not apply a KV-cache formula everywhere.
 
-Do not teach head counts, cache formulas, grouped-query attention, or architecture taxonomies here. Those are reference material.
+Do not teach head counts, GQA/MQA, cache derivations, or an architecture taxonomy.
 
-**Step 5: Add an actionable measurement checklist**
-
-Teach learners to record:
+End with a checklist that records:
 
 - artifact size;
 - loaded/idle memory under a named engine and loading policy;
@@ -277,304 +336,426 @@ Teach learners to record:
 - peak memory during a representative run;
 - remaining headroom.
 
-**Step 6: Add three simple quiz questions**
-
-Assess:
-
-1. Why file size is not peak memory.
-2. Why two runs with the same artifact can use different peak memory.
-3. What must be recorded before claiming that a candidate fits.
-
-Use `assets/quiz.js`, fieldsets, live feedback, reset controls, glossary links only outside options, and matching terms footer.
-
-**Step 7: Create a requirements ledger**
-
-The ledger must explicitly confirm:
-
-- no framework/runtime/product names needed for the spine;
-- no unexplained formula;
-- conventional cache correctly scoped;
-- first glossary targets and footer set match;
-- one clear handoff to format reading.
-
-**Step 8: Validate the draft page locally**
-
-Run the course audit after temporarily adding only the draft page if the audit scans all HTML pages; otherwise use the audit after integration. Validate HTML structure manually: exactly one `<main>`, two matching nav landmarks, shared quiz script, three semantic tables/blocks as applicable.
-
-**Step 9: Commit track output**
+Commit:
 
 ```bash
-git add lessons/0003-model-memory-and-context.html docs/reviews/2026-07-18-memory-lesson-requirements.md
-git commit -m "docs: draft model memory and context lesson"
+git add lessons/0003-model-memory-and-context.html
+git commit -m "docs: add practical fit and headroom workflow"
 ```
+
+## Task B4: Add the quiz, glossary links, citations, and handoff
+
+**Modify:** `lessons/0003-model-memory-and-context.html`
+
+Add three quiz questions:
+
+1. why file size is not peak memory;
+2. why the same artifact can have different peaks;
+3. what must be recorded before claiming a candidate fits.
+
+Add first-occurrence glossary links and an exactly matching terms footer. Link relevant claims to the existing evidence ledger/reference. End by explaining that the next lesson identifies the concrete artifact, quantization recipe, and runtime whose fit must be checked.
+
+Commit:
+
+```bash
+git add lessons/0003-model-memory-and-context.html
+git commit -m "docs: complete memory lesson practice and references"
+```
+
+## Task B5: Validate Track B
+
+The audit scans every lesson HTML page even if it is not yet in `course.json`.
+
+```bash
+python3 scripts/audit_course.py --allow-planned-lessons
+node --check assets/quiz.js
+git diff --check
+```
+
+Expected: exits 0. The draft must pass general HTML, local-link, glossary, and quiz contracts; manifest-order validation occurs after integration.
 
 ---
 
-## Track C — Current Lesson 3: formats as a practical classification skill
+# Phase 1 — Parallel Track C: Make Format Reading a Practical Skill
 
-### Task C.1: Reduce Lesson 3 to three representative examples
+Work in `$WORKTREE_ROOT/track-c`.
 
-**Objective:** Turn format reading from an encyclopedia into a skill: classify a label and identify what remains unknown.
+## Task C1: Write the lesson/reference allocation map
 
-**Files:**
-- Modify: current `lessons/0003-reading-quantization-formats.html` (will be renamed only during integration)
-- Modify: `reference/quantization-formats.html`
-- Modify if required: `resources.html`, `RESOURCES.md`
+**Create:** `docs/reviews/2026-07-18-format-lesson-allocation.md`
 
-**Step 1: Rewrite the main promise**
+Record:
 
-Open with a concrete situation:
+- Practical decision: identify what a label describes, establish compatibility inputs, and avoid false equivalences.
+- Main lesson: three representative examples and one configuration-reading exercise.
+- Reference: complete version-pinned catalogue, source revisions, effective-bpw examples, runtime/kernel boundaries.
+- Learner action: produce a complete candidate description rather than trusting a filename.
 
-> A filename such as `Q4_K_M` looks like an answer, but it is only a label. Before comparing two downloads, identify what category the label belongs to and what else you still need to know.
+Commit:
 
-**Step 2: Teach only three representative examples in the main lesson**
+```bash
+git add docs/reviews/2026-07-18-format-lesson-allocation.md
+git commit -m "docs: define format lesson and reference boundary"
+```
 
-Use exactly these examples:
+## Task C2: Rebuild the opening around three examples
+
+**Modify:** `lessons/0003-reading-quantization-formats.html`
+
+Open with:
+
+> A filename such as `Q4_K_M` looks like an answer, but it is only a label. Before comparing downloads, identify what category each name belongs to and what information is still missing.
+
+Use only these examples in the main teaching table:
 
 | Example | Category | Does not establish |
 |---|---|---|
-| GGUF | Artifact/container | The encoding of every tensor or runtime performance |
-| `Q4_K_M` | Model-file recipe | A universal four-bit representation |
-| MLX affine 8-bit/group 64 | Quantization configuration | That it is GGML `Q8_0`, or that runtime state is eight-bit |
+| GGUF | Artifact/container | Encoding of every tensor or runtime performance |
+| `Q4_K_M` | Model-file recipe | One universal four-bit tensor representation |
+| MLX affine 8-bit/group 64 | Quantization configuration | GGML `Q8_0`, runtime-state precision, or universal compatibility |
 
-Use “one name, one category” as the lesson’s sole organizing phrase.
+Use “one name, one category” as the organizing phrase.
 
-**Step 3: Move the catalogue to the reference page**
-
-Keep the full version-pinned table and its source revisions in `reference/quantization-formats.html`, including:
-
-- Q8_0/Q6_K/IQ labels;
-- MLX affine, MXFP4, NVFP4;
-- oMLX oQ recipes;
-- runtime and kernel compatibility boundaries;
-- effective-bpw empirical examples.
-
-Every implementation-specific fact stays pinned and linked through the evidence ledger. Do not discard precision; relocate it.
-
-**Step 4: Move the configuration exercise early**
-
-Place an anonymized configuration-field exercise immediately after the three examples. The learner should infer category stacks from fields, not filenames.
-
-**Step 5: Defer decision-procedure detail**
-
-Replace the current long five-step section with one brief transition:
-
-> Once you can name the artifact, recipe, target, and runtime, you can check whether it fits. The next lesson separates file size from peak runtime memory.
-
-The full canonical procedure remains in `reference/quantization-decision-checklist.html` and can recur briefly after all its prerequisites have been taught.
-
-**Step 6: Correct stale references**
-
-Remove or rewrite “after Lesson 1’s memory accounting.” The final integrated lesson order makes memory the direct predecessor to format selection.
-
-**Step 7: Keep only three quiz questions plus the configuration exercise**
-
-Assess:
-
-1. artifact vs runtime;
-2. why similarly named eight-bit formats are not automatically interchangeable;
-3. what successful loading leaves unknown.
-
-**Step 8: Verify source and glossary contracts**
+Commit:
 
 ```bash
-python3 scripts/audit_course.py --allow-planned-lessons
-git diff --check
+git add lessons/0003-reading-quantization-formats.html
+git commit -m "docs: teach format labels through three categories"
 ```
 
-Audit every changed implementation claim against its pinned source before submitting the track.
+## Task C3: Move the configuration-reading exercise early
 
-**Step 9: Commit track output**
+**Modify:** `lessons/0003-reading-quantization-formats.html`
+
+Place the anonymized configuration exercise immediately after the three examples. Require the learner to identify:
+
+- artifact/framework category;
+- quantized target;
+- encoding/recipe and grouping;
+- runtime identity;
+- what remains unproven about fit, speed, and quality.
+
+Keep the exercise generalizable and free of personal paths, private model IDs, or unpublished results.
+
+Commit:
+
+```bash
+git add lessons/0003-reading-quantization-formats.html
+git commit -m "docs: move format inspection practice into main flow"
+```
+
+## Task C4: Move catalogue detail to the reference
+
+**Modify:**
+
+- `lessons/0003-reading-quantization-formats.html`
+- `reference/quantization-formats.html`
+- `resources.html`
+- `RESOURCES.md`
+
+The main lesson must not require memorizing Q6_K, IQ variants, MXFP4, NVFP4, oQ recipes, vLLM, or SGLang.
+
+Preserve that material in the reference with its pinned source revisions and exact scope. Also preserve advanced mapping families removed by Track A when they remain useful and sourced.
+
+Do not invent or loosen implementation claims. Update source entries only when needed to preserve adjacent evidence.
+
+Commit:
 
 ```bash
 git add lessons/0003-reading-quantization-formats.html reference/quantization-formats.html resources.html RESOURCES.md
-git commit -m "docs: focus format reading lesson on classification"
+git commit -m "docs: move format catalogue into reference material"
+```
+
+## Task C5: Simplify the checklist, handoff, and quiz
+
+**Modify:** `lessons/0003-reading-quantization-formats.html`
+
+Replace the repeated five-step procedure with one practical output template:
+
+```text
+checkpoint
++ artifact/container
++ quantized target
++ encoding/recipe and grouping
++ runtime/backend version
++ intended hardware
+```
+
+Acknowledge the memory lesson as prior knowledge. Point forward to choosing among compatible candidates:
+
+> The memory lesson established what to measure for fit. Now that you can describe the candidate and runtime precisely, the next lesson shows how much validation is appropriate before choosing.
+
+Keep three quiz questions plus the configuration exercise:
+
+1. artifact versus runtime;
+2. why similarly named eight-bit formats are not interchangeable;
+3. what successful loading leaves unknown.
+
+Commit:
+
+```bash
+git add lessons/0003-reading-quantization-formats.html
+git commit -m "docs: simplify format lesson decision output"
+```
+
+## Task C6: Validate Track C
+
+```bash
+python3 scripts/audit_course.py --allow-planned-lessons
+node --check assets/quiz.js
+git diff --check
+```
+
+Expected: exits 0. Verify every changed implementation claim against the pinned source before marking the branch ready.
+
+---
+
+# Phase 1 — Parallel Track D: Publish a Practical Choice and Validation Lesson
+
+Work in `$WORKTREE_ROOT/track-d`.
+
+## Task D1: Allocate practical versus specialist evaluation content
+
+**Create:** `docs/reviews/2026-07-18-choice-lesson-allocation.md`
+
+Record:
+
+- Practical decision: choose among compatible candidates that fit.
+- Main lesson: hard constraints, shortlist, proportional validation, task quality first, memory/speed second, transparent failures.
+- Reference: detailed preregistration, missing-data rules, F2P/P2P/reward definitions, paired statistical reporting, causal-language taxonomy.
+- Deferred Lesson 6: only the controlled case-study execution and result.
+
+Commit:
+
+```bash
+git add docs/reviews/2026-07-18-choice-lesson-allocation.md
+git commit -m "docs: define practical choice versus protocol scope"
+```
+
+## Task D2: Create the advanced evaluation reference
+
+**Create:** `reference/evaluation-protocol.html`
+
+Move and preserve advanced, generally useful material from the current lesson:
+
+- mechanism / implementation detail / observation / hypothesis;
+- detailed matched-condition fields;
+- preregistered missing-data and exclusion rules;
+- paired/repeated analysis guidance;
+- pooled-mean confounding anti-example;
+- optional SWE-agent F2P/P2P/reward example.
+
+Generalize retrospective project-remediation prose. Do not describe private or unpublished historical outcomes.
+
+The reference must use shared CSS, exactly one `<main>`, semantic tables, glossary links and matching footer, and high-trust citations.
+
+Commit:
+
+```bash
+git add reference/evaluation-protocol.html
+git commit -m "docs: add optional controlled evaluation reference"
+```
+
+## Task D3: Rebuild the lesson opening and practical decision path
+
+**Modify:** `lessons/0004-measuring-quantization-quality.html`
+
+Open with:
+
+> Suppose two candidates both work with your runtime and fit in memory. One is smaller or faster; the other may preserve more quality. A suffix cannot settle the choice. Use the amount of validation that matches how important the decision is.
+
+Teach this main path:
+
+1. Apply hard constraints: compatibility, fit, and required context/headroom.
+2. Shortlist two or three candidates rather than every available quant.
+3. Hold checkpoint, task, runtime settings, prompts/tools, and environment steady.
+4. Measure task quality first; interpret memory and speed with quality.
+5. Report failures rather than silently dropping them.
+6. Choose the supported trade-off and state remaining uncertainty.
+
+Commit:
+
+```bash
+git add lessons/0004-measuring-quantization-quality.html
+git commit -m "docs: rebuild final lesson around practical choice"
+```
+
+## Task D4: Add proportional validation guidance
+
+**Modify:** `lessons/0004-measuring-quantization-quality.html`
+
+Teach three validation levels:
+
+| Stakes | Appropriate validation |
+|---|---|
+| Casual or reversible use | Representative smoke tests and obvious failure checks |
+| Important recurring workload | Matched tasks under each shortlisted candidate; repeat when outputs are stochastic |
+| Public, expensive, or causal claim | Preregistered paired/repeated protocol from the advanced reference |
+
+Make clear that an amateur does not need a research-grade experiment for every local choice.
+
+Use a concise workload-to-quality table:
+
+| Workload | Direct quality signal |
+|---|---|
+| Coding | Verified tests or task-specific checks |
+| Classification | Accuracy/F1 or equivalent measure |
+| Summarization | Factuality and required-content criteria |
+| Chat/writing | Defined rubric or blinded preference |
+| Agentic task | Externally verified completion |
+
+Move F2P/P2P/reward details out of the main path and link to `../reference/evaluation-protocol.html`.
+
+Commit:
+
+```bash
+git add lessons/0004-measuring-quantization-quality.html
+git commit -m "docs: add proportional quant validation guidance"
+```
+
+## Task D5: End with an actionable choice template and quiz
+
+**Modify:** `lessons/0004-measuring-quantization-quality.html`
+
+End with:
+
+```text
+Selected model/checkpoint: [...]
+Hardware and usable memory: [...]
+Compatible runtime: [...]
+Required context/headroom: [...]
+Shortlisted candidates: A / B / C
+Validation level: smoke test / matched tasks / controlled study
+Primary quality result: [...]
+Memory and speed result: [...]
+Choice: [...]
+Remaining uncertainty: [...]
+```
+
+Keep three or four quiz questions assessing:
+
+1. why compatibility and fit are hard constraints;
+2. why task quality comes before speed/steps;
+3. what level of validation is proportional to the decision;
+4. why unmatched tasks cannot isolate a quantization effect.
+
+End by linking the general method to the planned controlled case study without implying that the learner must wait for it.
+
+Commit:
+
+```bash
+git add lessons/0004-measuring-quantization-quality.html
+git commit -m "docs: complete practical quant choice workflow"
+```
+
+## Task D6: Validate Track D
+
+```bash
+python3 scripts/audit_course.py --allow-planned-lessons
+node --check assets/quiz.js
+git diff --check
+```
+
+Expected: exits 0.
+
+---
+
+# Phase 1 — Parallel Track E: Mission-to-Course Audit
+
+Work in `$WORKTREE_ROOT/track-e`.
+
+## Task E1: Audit all living course surfaces against the mission
+
+**Objective:** Prevent the rewrite from improving Lessons 2–5 while leaving stale framing elsewhere.
+
+**Read only:**
+
+- `MISSION.md`, `mission.html`
+- `index.html`
+- Lessons 1–4
+- `reference/quantization-decision-checklist.html`
+- `reference/tensors-and-layers.html`
+- `AGENTS.md`, `QA.md`, `course.json`
+
+**Create:** `docs/reviews/2026-07-18-mission-to-course-map.md`
+
+Use this matrix:
+
+| Surface | Practical job | Supporting knowledge | Learner action | Finding |
+|---|---|---|---|---|
+| Mission/index | Define learner, scope, and “best” | Conditional trade-offs | Know what course will and will not answer | pass/fix |
+| Lesson 1 | Explain only the internals needed for quantization | Tensors, layers, weights | Understand what quantization changes | pass/fix |
+| Lesson 2 | Explain approximation/storage mechanics | Levels, blocks, metadata | Understand the quant trade-off | pass/fix |
+| New Lesson 3 | Explain fit/headroom | Runtime memory buckets | Measure whether candidate fits | pass/fix |
+| Format lesson | Explain labels/compatibility | Category distinctions | Describe candidate completely | pass/fix |
+| Choice lesson | Provide practical selection method | Proportional validation | Choose and state uncertainty | pass/fix |
+| References | Preserve optional depth | Specialist detail | Look up detail when needed | pass/fix |
+
+Findings must identify exact files/sections and classify blocker / important / polish. Track E does not edit course content.
+
+Commit:
+
+```bash
+git add docs/reviews/2026-07-18-mission-to-course-map.md
+git commit -m "docs: audit course surfaces against practical mission"
 ```
 
 ---
 
-## Track D — Current Lesson 4: evaluation as an answer to a practical choice
+# Phase 2 — Integrate the Parallel Drafts Serially
 
-### Task D.1: Restructure the evaluation lesson around the decision
+## Task 2.1: Create the integration worktree
 
-**Objective:** Preserve rigorous evaluation requirements while giving general learners a natural, practical entry point.
+From the original repository root:
 
-**Files:**
-- Modify: current `lessons/0004-measuring-quantization-quality.html` (will be renamed only during integration)
-- Optional create/modify: `reference/evaluation-protocol.html` or existing `case-study/protocol.md` only if it can be linked as a rendered static HTML page
-
-**Step 1: Replace the opening with a decision scenario**
-
-Use this direction:
-
-> Suppose two artifacts both fit in memory. One is smaller; the other may preserve more quality. A suffix cannot settle the choice. Compare them on the workload you actually care about, with everything else held steady.
-
-**Step 2: Teach the four-question main path**
-
-Organize the main lesson around:
-
-1. **What stays the same?** Checkpoint, tokenizer, task, engine settings, prompts/tools, and environment.
-2. **What changes?** Exact declared quantization condition.
-3. **What do you measure?** Task quality first, then memory and speed.
-4. **How do you compare fairly?** Same task under both conditions; repeats if stochastic; failures reported rather than silently removed.
-
-**Step 3: Keep evidence categories as a short guardrail**
-
-Retain mechanism / implementation detail / observation / hypothesis, but place it after the decision scenario and label it “How to describe your result honestly.” Keep one concise example of each.
-
-**Step 4: Make the main metrics general**
-
-Keep a compact table mapping workload types to direct quality signals:
-
-| Workload | Primary quality signal |
-|---|---|
-| Coding | Verified tests or task-specific checks |
-| Classification | Accuracy/F1 or equivalent task measure |
-| Summarization | Factuality/content criteria |
-| Chat or writing | Defined rubric or blinded preference |
-| Agentic task | Externally verified completion |
-
-Move F2P/P2P/reward definitions to an optional SWE-agent example or a reference page. Do not require them to understand the core lesson.
-
-**Step 5: Generalize project-remediation prose**
-
-Replace the retrospective anti-example with a universal warning about unmatched tasks, architectures, repetitions, and completion definitions. Do not narrate prior project audit history in the main instructional path.
-
-**Step 6: Preserve the key anti-example and paired-design practice**
-
-Retain a short pooled-mean confounding example and the exercise that asks the learner to reject an invalid causal comparison. It is the best concrete demonstration of why pairing matters.
-
-**Step 7: End with an actionable mini-protocol**
-
-End with a learner-ready template:
-
-```text
-Candidate A: [artifact + declared encoding]
-Candidate B: [artifact + declared encoding]
-Held constant: [checkpoint, task, engine settings, prompt/tools]
-Run: each task under both candidates [and repeats if stochastic]
-Record: task quality, peak memory, latency, failures
-Conclusion: scoped to this model, stack, workload, and settings
+```bash
+export INTEGRATION="$WORKTREE_ROOT/integration"
+git worktree add "$INTEGRATION" -b course/practical-first-version "$BASE"
+cd "$INTEGRATION"
 ```
 
-**Step 8: Keep the evidence-gated capstone boundary**
+## Task 2.2: Cherry-pick the authoring and audit branches
 
-Link to the deferred capstone and state that this lesson teaches how to prepare a comparison, not a result-dependent recommendation.
+Cherry-pick all commits from each branch in this order:
 
-**Step 9: Validate and commit**
+1. `course/lesson-2`
+2. `course/memory-lesson`
+3. `course/format-lesson`
+4. `course/choice-lesson`
+5. `course/mission-audit`
+
+Use the exact commit ranges reported by each track. Do not silently rewrite accepted prose while resolving conflicts. The expected conflicts are limited to reference/resource material; reconcile them by retaining all sourced, non-duplicated material.
+
+After each branch:
 
 ```bash
 python3 scripts/audit_course.py --allow-planned-lessons
 git diff --check
-git add lessons/0004-measuring-quantization-quality.html
-git commit -m "docs: make evaluation lesson decision-led"
 ```
 
----
+If a cherry-pick introduces a failure, stop and resolve it before adding the next track.
 
-# Phase 2 — Editorial review gates (parallel)
+## Task 2.3: Install the clean first-version filenames
 
-### Task 2.1: Tone and learner-flow review
+**Objective:** Produce one clean current sequence with no compatibility routes.
 
-**Objective:** Verify that each track is concrete, adult, and accessible rather than bureaucratic or cutesy.
+Perform:
 
-**Files:**
-- Read: Track A–D changed files
-- Create: `docs/reviews/2026-07-18-course-flow-tone-review.md`
-
-Review against these questions:
-
-- Does each lesson open with a learner problem rather than a definition or policy?
-- Is every analogy doing explanatory work rather than adding cheerfulness?
-- Are implementation details deferred until the learner has a reason to need them?
-- Does a learner know why the next lesson follows from the current one?
-- Are there unexplained terms, equations, or design choices?
-
-Classify issues as blocker / important / polish. No changes during this review.
-
-### Task 2.2: Technical and evidence review
-
-**Objective:** Protect the audit remediation gains while simplifying presentation.
-
-**Files:**
-- Read: Track A–D changed files, `reference/quantization-formats.html`, `resources.html`, `course.json`
-- Create: `docs/reviews/2026-07-18-course-flow-evidence-review.md`
-
-Review for:
-
-- implementation facts still pinned to source revisions;
-- correct distinctions between artifact, encoding, recipe, runtime, backend, and kernel;
-- no universal causal claim based on a toy example or observation;
-- architecture-specific cache claims clearly scoped;
-- quantitative tables accurately captioned and sourced;
-- no personal details, local paths, private artifacts, or unvalidated experiment results.
-
-### Task 2.3: Resolve blockers before integration
-
-**Objective:** Accept only tracks that pass both reviews.
-
-For each track, record one of:
-
-- **Accepted** — ready for integration;
-- **Revise** — list exact section and required fix;
-- **Reject** — explain which contract constraint failed.
-
-Do not start renaming pages or modifying `course.json` until all accepted tracks are available.
-
----
-
-# Phase 3 — Structural integration (serial; one owner)
-
-### Task 3.1: Install the new ordered lesson paths
-
-**Objective:** Insert memory before format selection without breaking existing URLs.
-
-**Files:**
-- Create: `lessons/0003-model-memory-and-context.html` (accepted Track B draft)
-- Rename: `lessons/0003-reading-quantization-formats.html` → `lessons/0004-reading-quantization-formats.html`
-- Rename: `lessons/0004-measuring-quantization-quality.html` → `lessons/0005-measuring-quantization-quality.html`
-- Update planned manifest path: `lessons/0005-choosing-and-validating-a-quant.html` → `lessons/0006-choosing-and-validating-a-quant.html`
-- Create redirect: `lessons/0003-reading-quantization-formats.html`
-- Create redirect: `lessons/0004-measuring-quantization-quality.html`
-
-**Step 1: Rename the two published lesson files and update internal paths.**
-
-The old path files must become compatibility redirects rather than duplicate lessons. Each redirect must include:
-
-```html
-<meta name="robots" content="noindex">
-<title>Moved lesson — Reading Quantization Formats</title>
-<body data-course-redirect="true">
-  <p>This lesson moved to <a href="0004-reading-quantization-formats.html">Lesson 4: Reading Quantization Formats</a>.</p>
-</body>
+```bash
+git mv lessons/0003-reading-quantization-formats.html lessons/0004-reading-quantization-formats.html
+git mv lessons/0004-measuring-quantization-quality.html lessons/0005-choosing-and-validating-a-quant.html
+git rm lessons/0003-quantization-in-practice.html
 ```
 
-Use the analogous title/target for the former measuring-quality path.
+There is no published file for the planned current `0005-choosing-and-validating-a-quant.html`; its manifest entry will become Lesson 6’s case-study path.
 
-**Step 2: Handle the planned lesson path deliberately.**
+Do not create redirects or tombstones. This is the first version.
 
-If no published `0005-choosing-and-validating-a-quant.html` file exists, update only its `course.json` path to `0006-choosing-and-validating-a-quant.html`. If a public stub exists, replace it with a redirect/tombstone appropriate to its actual prior publication state.
+## Task 2.4: Update the manifest
 
-**Step 3: Do not alter the older practical-guide redirect.**
+**Modify:** `course.json`
 
-`lessons/0003-quantization-in-practice.html` continues to redirect to the now-supported format/decision destination determined during integration. Update its target text only if needed; retain `data-course-redirect="true"`.
-
-### Task 3.2: Update the manifest, course map, and all navigation
-
-**Objective:** Make every visible course surface agree on title, number, path, status, and duration.
-
-**Files:**
-- Modify: `course.json`
-- Modify: `index.html`
-- Modify: `mission.html` only if it promises a stale sequence
-- Modify: all published `lessons/0001-*.html` through `lessons/0005-*.html`
-- Modify: `AGENTS.md`
-- Modify: `QA.md`
-- Modify: relevant documents in `docs/plans/` or `docs/reviews/` that describe the current public sequence
-
-**Step 1: Set the new manifest**
-
-Use these lesson entries:
+Use:
 
 ```json
 {
@@ -591,84 +772,153 @@ Use these lesson entries:
 },
 {
   "number": 5,
-  "path": "lessons/0005-measuring-quantization-quality.html",
-  "title": "Measuring Quantization Quality",
-  "minutes": 9
+  "path": "lessons/0005-choosing-and-validating-a-quant.html",
+  "title": "Choosing and Validating a Quant",
+  "minutes": 10
 },
 {
   "number": 6,
-  "path": "lessons/0006-choosing-and-validating-a-quant.html",
-  "title": "Choosing and Validating a Quant",
+  "path": "lessons/0006-controlled-quantization-case-study.html",
+  "title": "Controlled Quantization Case Study",
   "minutes": 12,
   "status": "planned",
   "gate": "deferred-pending-controlled-evidence"
 }
 ```
 
-Adjust Lesson 2 duration to the final measured scope; do not leave “15 min” if the simplified lesson is materially shorter.
+Adjust Lesson 2 duration to the final reading scope. Do not retain stale durations.
 
-**Step 2: Update top and bottom navigation symmetrically**
+## Task 2.5: Update all titles, progress labels, and navigation
 
-Required published chain:
+**Modify:** all five published lessons.
+
+Required sequence:
 
 ```text
-Lesson 1 → Lesson 2 → Lesson 3: Memory → Lesson 4: Formats → Lesson 5: Evaluation
+Lesson 1 → Lesson 2 → Lesson 3: Memory → Lesson 4: Formats → Lesson 5: Choose and Validate
 ```
 
-Published Lesson 5 must not link “Next” to planned Lesson 6. The index may show Lesson 6 as deferred but must not present it as a completed lesson.
+- Top and bottom navigation must match.
+- Lesson 5 must not link Next to planned Lesson 6.
+- Page `<title>`, H1, progress text, and `course.json` must agree.
+- Update Track B’s provisional next link and the accepted Track C/D handoffs after renaming.
 
-**Step 3: Update `index.html` descriptions**
+## Task 2.6: Update living course surfaces
 
-Use concise learner-facing cards, for example:
+**Modify:**
 
-- **Lesson 3:** “Why a model file that fits on disk can still need more memory at runtime. File size, context, peak memory, and headroom. ~7 min.”
-- **Lesson 4:** “Read real quantization labels without mistaking a file format, recipe, encoding, and runtime for the same thing. ~9 min.”
-- **Lesson 5:** “Compare candidates fairly on the workload that matters: task quality first, then memory and speed. ~9 min.”
+- `index.html`
+- `AGENTS.md`
+- `QA.md`
+- `reference/quantization-decision-checklist.html`
+- `reference/tensors-and-layers.html` only if the mission audit requires it
+- `resources.html`, `RESOURCES.md` for accepted source-ledger additions
+- `learning-records/0003-quantization-in-practice.md`
 
-**Step 4: Update operational documentation**
+Required updates:
 
-Revise `AGENTS.md` and `QA.md` from “four published lessons and one planned lesson” to “five published lessons and one planned lesson.” Preserve the migration-mode and evidence-gate rules.
+- Five published lessons and one planned case study.
+- Strict mode becomes the future six-lesson gate.
+- Index cards use practical descriptions.
+- The index/public course path must show that the general choice method is already published.
+- The planned item must be labeled a controlled case study, not the missing practical decision method.
+- Remove the obsolete lesson link from the learning record. Describe its historical source as a removed pre-release draft and point its supported concepts to the current Lesson 4/5 paths as appropriate.
+- Apply exact blocker/important fixes from Track E’s mission audit.
 
-### Task 3.3: Reconcile references and links
+Do **not** rewrite historical documents in `docs/plans/` or old audit reports. They are records of prior work. Add a supersession note only where a living document explicitly points readers to stale current guidance.
 
-**Objective:** Ensure lesson handoffs, reference links, redirects, and glossary contracts all point to the integrated sequence.
+## Task 2.7: Commit structural integration explicitly
 
-**Files:**
-- Modify as needed: `reference/quantization-decision-checklist.html`, `reference/tensors-and-layers.html`, `reference/quantization-formats.html`, `resources.html`, `RESOURCES.md`
-
-**Step 1: Update lesson references in copy**
-
-- Lesson 2 must point to the memory lesson as next.
-- Memory lesson must point to the format lesson.
-- Format lesson must point to evaluation.
-- Evaluation must link to the deferred capstone publication status, not promise a current next lesson.
-
-**Step 2: Audit local fragments and legacy paths**
-
-Run:
+Stage only named files, not whole directories blindly:
 
 ```bash
-python3 scripts/audit_course.py --allow-planned-lessons
+git add course.json index.html AGENTS.md QA.md \
+  lessons/0001-tensors-and-layers.html \
+  lessons/0002-how-quantization-works.html \
+  lessons/0003-model-memory-and-context.html \
+  lessons/0004-reading-quantization-formats.html \
+  lessons/0005-choosing-and-validating-a-quant.html \
+  reference/quantization-decision-checklist.html \
+  reference/tensors-and-layers.html \
+  reference/quantization-formats.html \
+  reference/evaluation-protocol.html \
+  resources.html RESOURCES.md \
+  learning-records/0003-quantization-in-practice.md
+
+git add -u lessons/
+git commit -m "docs: install practical five-lesson course sequence"
 ```
 
-Expected: no missing local files or fragments; redirects exempt from main-landmark checks.
+Before committing, inspect `git status --short` and remove duplicate path arguments if needed. Do not stage unrelated files.
 
-**Step 3: Commit integration separately**
+---
+
+# Phase 3 — Two Parallel Reviews on the Integrated Draft
+
+Both reviewers inspect `$INTEGRATION` read-only and return full markdown findings. They do not modify files.
+
+## Review R1: Mission, tone, and learner flow
+
+Check every main-path section against:
+
+- practical decision supported;
+- minimum theory only;
+- learner action enabled;
+- adult, direct, approachable tone;
+- no cutesy or compliance framing;
+- previous lesson prerequisite is actually taught;
+- next lesson feels necessary;
+- Lesson 5 provides a usable decision now.
+
+Required output: blocker / important / polish findings with exact file and section references, plus explicit passes for each lesson.
+
+## Review R2: Technical evidence, accessibility, and publication contract
+
+Check:
+
+- implementation facts remain version-pinned;
+- pedagogical examples are labeled;
+- no universal causal claim from an analogy or observation;
+- retained-state/cache claims are architecture-scoped;
+- all quantitative tables have source/scope captions;
+- artifact/encoding/recipe/runtime/backend/kernel categories remain distinct;
+- glossary first occurrences and footers match;
+- quizzes use shared JS and semantic/live-feedback contracts;
+- five published lessons and one planned case study are consistent;
+- no personal paths, private IDs, or unpublished results.
+
+Required output: blocker / important / polish findings with exact file and section references, plus successful checks.
+
+## Task 3.1: Write the review reports
+
+The integration owner saves the returned reports as:
+
+- `docs/reviews/2026-07-18-integrated-mission-tone-review.md`
+- `docs/reviews/2026-07-18-integrated-technical-review.md`
+
+## Task 3.2: Resolve every blocker and important finding serially
+
+- Apply fixes on `course/practical-first-version`.
+- Record each finding → fix → verification in the corresponding report.
+- Re-run both reviewers after fixes.
+- Do not proceed until both reviewers return no blockers or important findings.
+
+Commit:
 
 ```bash
-git add course.json index.html mission.html AGENTS.md QA.md lessons reference resources.html RESOURCES.md docs
-git commit -m "docs: add memory lesson and reorder learner path"
+git add <explicit-fixed-files> \
+  docs/reviews/2026-07-18-integrated-mission-tone-review.md \
+  docs/reviews/2026-07-18-integrated-technical-review.md
+git commit -m "fix: resolve integrated course review findings"
 ```
 
 ---
 
-# Phase 4 — End-to-end verification (serial)
+# Phase 4 — End-to-End Verification
 
-### Task 4.1: Run all mechanical checks
+## Task 4.1: Run all mechanical checks
 
-**Objective:** Verify course contracts after all content and path changes.
-
-Run from repository root:
+From `$INTEGRATION`:
 
 ```bash
 python3 -m unittest discover -s tests -v
@@ -676,129 +926,165 @@ python3 scripts/audit_course.py --allow-planned-lessons
 python3 -m py_compile scripts/audit_course.py scripts/analyze_case_study.py
 node --check assets/quiz.js
 git diff --check
-git grep -l '/Users/\|/home/\|/Users/.*Projects/\|Mac Studio\|MacBook\|prefers\|personal\|local artifact\|private model' -- '*.html' '*.md' '*.json' '*.py' '*.js' '*.css'
 ```
 
-Expected:
+Expected: all exit 0.
 
-- unit tests pass;
-- audit exits 0;
-- Python/JS checks exit 0;
-- no whitespace errors;
-- privacy scan has no unintended public findings.
+## Task 4.2: Run a focused privacy scan
 
-### Task 4.2: Verify learner flow manually at narrow and desktop widths
+Do not scan historical plans/reviews as if they were current public lesson content. Scan the public and living operational surfaces:
 
-**Objective:** Test the actual learning path rather than only static contracts.
+```bash
+git grep -n '/Users/\|/home/\|Mac Studio\|MacBook\|private model\|local artifact' -- \
+  'index.html' 'mission.html' 'MISSION.md' 'AGENTS.md' 'QA.md' \
+  'lessons/*.html' 'reference/*.html' 'course.json' 'resources.html' 'RESOURCES.md'
+```
 
-**Step 1: Read each lesson in sequence**
+Expected: no unintended personal paths, hardware identities, private model IDs, or artifact provenance. Review each match; do not treat an expected warning phrase as a failure without context.
 
-For Lessons 1–5, answer in a review note:
+## Task 4.3: Verify learner flow manually
 
-- What question did this lesson answer?
-- What prior lesson knowledge did it use?
-- What specific question does it make the next lesson feel necessary to answer?
+Read Lessons 1–5 in order and record for each:
 
-Any lesson that cannot answer all three is returned to its owning editorial track.
+1. Which decision does this lesson support?
+2. Which prior concept does it use?
+3. What action can the learner take now?
+4. Why does the next lesson follow?
 
-**Step 2: Verify at 390 px and desktop width**
+Lesson 5 should answer the first three and end the published path; it need not manufacture a reason to enter the planned case study.
 
-Check:
+## Task 4.4: Verify responsive, keyboard, and quiz behavior
 
-- every table has intentional horizontal handling or remains readable;
+At desktop width and 390 px:
+
 - no page-level horizontal overflow;
-- visible focus remains clear;
+- wide tables have intentional scrolling and a visible hint;
 - navigation order is logical;
-- redirects explain their destination.
-
-**Step 3: Exercise every quiz with wrong and correct answers**
+- focus is visible;
+- print output is readable.
 
 For every quiz:
 
-- choose a wrong option;
-- verify correct answer is revealed and explanation is meaningful;
-- verify live feedback receives focus/announces;
-- activate “Try again”; 
-- choose the correct option;
-- verify reset behavior is intentional.
+1. choose a wrong answer;
+2. verify the correct answer and explanation appear;
+3. verify feedback receives focus/is announced;
+4. activate retry;
+5. choose the correct answer;
+6. verify reset behavior.
 
-### Task 4.3: Review deployment diff and publish
-
-**Objective:** Deploy only the integrated, verified course.
-
-**Step 1: Review the release diff**
+## Task 4.5: Confirm repository contents
 
 ```bash
 git status --short
-git diff HEAD~1..HEAD --stat
-git log --oneline -5
+git ls-files 'lessons/*.html'
+git log --oneline --decorate -10
 ```
 
-Expected: only approved course content, reference, manifest, documentation, and redirect changes.
+Expected lesson files include only the five published first-version pages plus any actually supported non-lesson pages. They must not include:
 
-**Step 2: Commit any verification-only fixes separately**
+- `lessons/0003-quantization-in-practice.html`
+- old duplicate `0003-reading-quantization-formats.html`
+- old duplicate `0004-measuring-quantization-quality.html`
+- redirects or compatibility pages.
+
+Expected worktree: clean after the final verification commit.
+
+---
+
+# Phase 5 — Merge and Deploy
+
+## Task 5.1: Merge the verified integration branch
+
+Return to the original repository worktree:
 
 ```bash
-git add <verified-fix-files>
-git commit -m "fix: polish reordered course flow"
+cd "$COURSE_REPO"
+git status --short
+git switch main
+git merge --ff-only course/practical-first-version
 ```
 
-**Step 3: Push and verify GitHub Pages**
+Expected: clean fast-forward merge. If main advanced, stop and rebase/re-run verification; do not force the merge.
+
+## Task 5.2: Push and verify GitHub Pages
 
 ```bash
 git push origin main
 ```
 
-Then inspect the live pages:
+Verify live:
 
-- home/index;
-- all five published lessons;
-- both moved old URLs;
-- glossary fragments from each changed lesson.
+- course home and mission;
+- Lessons 1–5 in order;
+- glossary fragments from every changed lesson;
+- format and evaluation reference pages;
+- planned Lesson 6 shown as deferred and unlinked as a published page;
+- no obsolete pre-release lesson URLs are advertised anywhere in the site.
 
----
+Do not report deployment complete until the live pages return the new titles/content.
 
-## Dependency and parallelism map
+## Task 5.3: Remove temporary worktrees after live verification
 
-```text
-Phase 0 contract/freeze
-        │
-        ├── Track A: Lesson 2 simplification ───────┐
-        ├── Track B: new memory lesson draft ───────┤
-        ├── Track C: format lesson + reference ─────┼──> Phase 2 parallel reviews
-        └── Track D: evaluation lesson ─────────────┘
-                                                       │
-                                                       ▼
-                                        Phase 3 serial integration / renumbering
-                                                       │
-                                                       ▼
-                                         Phase 4 serial QA, deploy, live check
+```bash
+git worktree remove "$WORKTREE_ROOT/track-a"
+git worktree remove "$WORKTREE_ROOT/track-b"
+git worktree remove "$WORKTREE_ROOT/track-c"
+git worktree remove "$WORKTREE_ROOT/track-d"
+git worktree remove "$WORKTREE_ROOT/track-e"
+git worktree remove "$WORKTREE_ROOT/integration"
 ```
 
-**Safe parallel units:** Tracks A–D and the two Phase 2 reviews.
-
-**Must remain serial:** structural renaming/redirects, `course.json`, index/navigation changes, `AGENTS.md`/`QA.md` publication-state changes, final audit, deployment.
+Delete merged temporary branches only after confirming all commits are reachable from `main`.
 
 ---
 
-## Risks and mitigation
+## Parallelism and dependency map
 
-| Risk | Mitigation |
-|---|---|
-| Adding a memory lesson breaks public URLs or course navigation | Preserve moved page paths as explicit `data-course-redirect` pages; integrate paths only after all content tracks pass review. |
-| Parallel prose rewrites drift in voice | Freeze the editorial contract; run a dedicated tone/flow review before integration. |
-| Simplification accidentally deletes evidence discipline | Keep version-pinned catalogue and protocol content in references; run a technical/evidence review. |
-| New lesson reintroduces old Lesson 1 overload | Restrict it to four memory buckets and one workload scenario; no cache formulas or architecture taxonomy. |
-| Lesson 2 becomes inaccurate while restoring baseline intuitions | Label simple representations as pedagogical; scope FP16/metadata/tolerance claims; retain exact technical detail only where sourced. |
-| Existing audit assumes four published lessons | Update `AGENTS.md`, `QA.md`, and any actual test/manifest assumptions during serial integration; run full tests after the manifest changes. |
-| Planned capstone accidentally becomes navigable | Keep Lesson 6 `status: "planned"`; do not add a Lesson 5 next link; run audit only with explicit planned-lessons flag. |
+```text
+Baseline checks + worktrees
+        │
+        ├── Track A: Lesson 2 chunks ────────────────┐
+        ├── Track B: Memory lesson chunks ───────────┤
+        ├── Track C: Format lesson/reference chunks ─┼──> Serial draft integration
+        ├── Track D: Choice lesson/reference chunks ─┤          │
+        └── Track E: Mission audit ──────────────────┘          ▼
+                                                    Structural renaming + living docs
+                                                                  │
+                                                                  ├── Review R1: mission/tone/flow
+                                                                  └── Review R2: evidence/a11y/contracts
+                                                                             │
+                                                                             ▼
+                                                                  Serial fixes + re-review
+                                                                             │
+                                                                             ▼
+                                                                   Full QA → merge → deploy
+```
+
+### Safe parallel work
+
+- Tracks A–E.
+- Reviews R1 and R2.
+
+### Must remain serial
+
+- Cherry-picking track commits.
+- Renaming files and deleting obsolete pre-release pages.
+- Updating `course.json`, navigation, index, living docs, and learning-record links.
+- Resolving integrated review findings.
+- Full validation, merge, deployment, and live verification.
+
+---
 
 ## Completion criteria
 
-- Five published lessons and one clearly deferred capstone are represented consistently in `course.json`, index, page titles, progress labels, and navigation.
-- A learner can travel from “weights are numbers” to “I can describe, size, shortlist, and fairly compare candidates” without unexplained conceptual leaps.
-- Lesson 2 does not duplicate the group-size trade-off or overclaim from a toy example.
-- Lesson 3 explains runtime memory without framework names or universal KV-cache assumptions.
-- Lesson 4 teaches label classification before showing detailed catalogues; detailed version-pinned facts remain in reference material.
-- Lesson 5 starts with a real decision and keeps evaluation methodology proportional to the learner’s task.
-- All automated checks, glossary contracts, responsive/keyboard/quiz checks, privacy scans, redirects, and live pages pass.
+- Five published lessons give an amateur a complete practical method after model selection.
+- Lesson 5 teaches choosing and proportional validation now; only the controlled case-study result is deferred.
+- The course clearly distinguishes learner sequence from real decision order.
+- Lesson 2 contains one quantization walkthrough and one group-size explanation, with scoped claims.
+- Lesson 3 enables a fit/headroom measurement without requiring architecture expertise.
+- Lesson 4 teaches category/compatibility reading through three representative examples; catalogue detail remains optional reference.
+- Lesson 5 starts from compatible candidates and ends with a concrete, proportional choice template.
+- No backward-compatibility files, redirects, or obsolete pre-release lesson pages remain.
+- Historical plans/reviews remain intact; living docs describe five published lessons and one planned controlled case study.
+- Both integrated reviews have no blocker or important findings.
+- All automated, glossary, navigation, privacy, responsive, keyboard, quiz, and live-site checks pass.

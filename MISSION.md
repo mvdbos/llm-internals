@@ -1,15 +1,17 @@
 # Mission
 
-**I want to understand LLM internals well enough to make smart quantization choices when running local models.**
+**As an amateur, I want to run the best possible local model on my hardware.**
 
 ## Primary goal
 
-When I see model options like `Q4_K_M`, `Q8_0`, `IQ3_XXS`, or `bf16`, I want to know what these actually mean — not just a rule of thumb, but the *why*. What trade-off am I making? When is 4-bit perfectly fine, and when is it hurting me?
+Once I have selected a model, I want practical guidance for choosing the right quantization and the other settings that materially affect whether it fits, runs well, and remains useful for my work. When I see options like `Q4_K_M`, `Q8_0`, `IQ3_XXS`, or `bf16`, I want to know what trade-off I am making—not just follow a rule of thumb.
 
-## Secondary goal
+## Supporting knowledge
 
-To get there, I need the prerequisite knowledge: what tensors and layers actually are inside an LLM. Not at a researcher level, but deep enough that quantization isn't just a magic compression knob.
+I want to learn the supporting knowledge that helps me make those choices confidently: what weights are, why quantization approximates them, why file size differs from runtime memory, what a format label does and does not identify, and how to compare candidates on the work I actually do.
 
-## Context
+I am not trying to become an expert in LLM internals, quantization implementations, or evaluation methodology. Technical detail belongs in the course only when it explains a practical local-model decision; deeper detail should remain available as reference material.
 
-I run local models regularly and have seen that quantization can affect output quality in subtle ways. I want to understand *why* that happens, so I can make better model choices without blind benchmarking every time.
+## What “best” means
+
+There is no universal best quant or local setup. The best choice depends on the selected model, available hardware and headroom, runtime compatibility, speed needs, and intended workload. The aim is to make a well-scoped choice and validate it when the trade-off matters—not to memorize a universal ranking or blindly benchmark everything.

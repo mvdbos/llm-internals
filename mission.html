@@ -12,19 +12,21 @@
 <main>
 <h1>Mission</h1>
 
-<p><strong>I want to understand LLM internals well enough to make smart quantization choices when running local models.</strong></p>
+<p><strong>As an amateur, I want to run the best possible local model on my hardware.</strong></p>
 
 <h2>Primary goal</h2>
 
-<p>When I see model options like <code>Q4_K_M</code>, <code>Q8_0</code>, <code>IQ3_XXS</code>, or <code>bf16</code>, I want to know what these actually mean — not just a rule of thumb, but the <em>why</em>. What trade-off am I making? When is 4-bit perfectly fine, and when is it hurting me?</p>
+<p>Once I have selected a model, I want practical guidance for choosing the right quantization and the other settings that materially affect whether it fits, runs well, and remains useful for my work. When I see options like <code>Q4_K_M</code>, <code>Q8_0</code>, <code>IQ3_XXS</code>, or <code>bf16</code>, I want to know what trade-off I am making—not just follow a rule of thumb.</p>
 
-<h2>Secondary goal</h2>
+<h2>Supporting knowledge</h2>
 
-<p>To get there, I need the prerequisite knowledge: what tensors and layers actually are inside an LLM. Not at a researcher level, but deep enough that quantization isn't just a magic compression knob.</p>
+<p>I want to learn the supporting knowledge that helps me make those choices confidently: what weights are, why quantization approximates them, why file size differs from runtime memory, what a format label does and does not identify, and how to compare candidates on the work I actually do.</p>
 
-<h2>Context</h2>
+<p>I am not trying to become an expert in LLM internals, quantization implementations, or evaluation methodology. Technical detail belongs in the course only when it explains a practical local-model decision; deeper detail should remain available as reference material.</p>
 
-<p>I run local models regularly and have seen that quantization can affect output quality in subtle ways. I want to understand <em>why</em> that happens, so I can make better model choices without blind benchmarking every time.</p>
+<h2>What “best” means</h2>
+
+<p>There is no universal best quant or local setup. The best choice depends on the selected model, available hardware and headroom, runtime compatibility, speed needs, and intended workload. The aim is to make a well-scoped choice and validate it when the trade-off matters—not to memorize a universal ranking or blindly benchmark everything.</p>
 </main>
 <nav class="course-nav" aria-label="Footer"><a href="index.html">← Course home</a><a href="lessons/0001-tensors-and-layers.html">Start Lesson 1</a></nav>
 </body>

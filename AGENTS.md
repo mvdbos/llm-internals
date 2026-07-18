@@ -2,6 +2,18 @@
 
 This repository is a dependency-free static course. Keep every public page generalizable, evidence-backed, accessible, and deployable directly on GitHub Pages.
 
+## Mission anchor — decision-making for an amateur local-model runner
+
+The course serves an amateur who wants to run the best possible local model on their available hardware. Model selection itself is a separate decision; this course helps with the choices that follow: the right quantization, runtime/setup choices that materially affect fitting and performance, and a practical way to validate the result on the learner’s own workload.
+
+Every lesson, reference page, exercise, and remediation decision must earn its place against this test:
+
+> Does this help a non-expert make a better practical local-model decision, or is it the minimum supporting knowledge needed to make that decision confidently?
+
+Prefer a small number of concrete decisions over exhaustive taxonomy. Teach supporting theory only when it explains a choice the learner will actually make—for example, why a model that fits on disk may not fit at runtime; why a label is insufficient to predict compatibility; or why a smaller artifact is not automatically the better choice. Do not require the learner to become an implementation, quantization, or evaluation expert. Use detailed catalogues, source pinning, and advanced protocol material as reference/optional depth, while keeping the main learner path practical, plain-language, and scoped.
+
+“Best” is always conditional on the declared model, hardware capacity, runtime compatibility, available memory/headroom, speed needs, and intended workload. Never replace that decision with a universal quant ranking, a single size threshold, or an unqualified recommendation.
+
 ## Canonical learner path
 
 Lesson order, titles, durations, and paths live in `course.json`. Every lesson, worked example, quiz, takeaway, and reference card must reinforce this decision procedure in exactly this order:

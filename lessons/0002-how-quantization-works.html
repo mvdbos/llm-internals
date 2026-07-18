@@ -8,9 +8,9 @@
 <link rel="stylesheet" href="../assets/style.css">
 </head>
 <body>
-<nav class="course-nav" aria-label="Lesson navigation"><a href="0001-tensors-and-layers.html">← Previous: Tensors &amp; Layers</a><a href="../index.html">Course home</a><a href="0003-reading-quantization-formats.html">Next: Formats and runtimes →</a></nav>
+<nav class="course-nav" aria-label="Lesson navigation"><a href="0001-tensors-and-layers.html">← Previous: Tensors &amp; Layers</a><a href="../index.html">Course home</a><a href="0003-model-memory-and-context.html">Next: Model memory and context →</a></nav>
 <main>
-<p class="lesson-progress">Lesson 2 of 4 published · ~9 min</p>
+<p class="lesson-progress">Lesson 2 of 5 published · ~9 min</p>
 <h1>Lesson 2: How Quantization Actually Works</h1>
 <p>Every <a href="../reference/glossary.html#weight" class="glossary-link">weight</a> is stored as a number. At <a href="../reference/glossary.html#fp16" class="glossary-link">FP16</a>, each number uses 16 bits. <a href="../reference/glossary.html#quantization" class="glossary-link">Quantization</a> asks whether the model can store an approximation in fewer bits and still be useful for your work.</p>
 
@@ -94,10 +94,10 @@ error = 0.36 - 0.31 = 0.05</code></pre>
 
 <h2>Takeaway and next step</h2>
 <p>Quantization replaces exact weight values with approximations. Blocks make that practical by sharing a little metadata across many low-bit values. Next, separate model-file size from the memory a running model actually needs.</p>
-<ul><li><a href="0003-reading-quantization-formats.html">Next: Reading Quantization Formats</a></li><li><a href="../reference/quantization-formats.html">Optional depth: Quantization formats</a></li></ul>
+<ul><li><a href="0003-model-memory-and-context.html">Next: Model memory and context</a></li><li><a href="../reference/quantization-formats.html">Optional depth: Quantization formats</a></li></ul>
 <div class="terms-footer"><p><strong>Terms in this lesson:</strong> <a href="../reference/glossary.html#weight">Weight</a> · <a href="../reference/glossary.html#fp16">FP16</a> · <a href="../reference/glossary.html#quantization">Quantization</a> · <a href="../reference/glossary.html#scale-factor">Scale factor</a> · <a href="../reference/glossary.html#offset">Offset</a> · <a href="../reference/glossary.html#zero-point">Zero point</a> · <a href="../reference/glossary.html#group-size">Group size</a> · <a href="../reference/glossary.html#effective-bits-per-weight">Effective bits per weight</a></p></div>
 </main>
-<nav class="course-nav" aria-label="Lesson navigation"><a href="0001-tensors-and-layers.html">← Previous: Tensors &amp; Layers</a><a href="../index.html">Course home</a><a href="0003-reading-quantization-formats.html">Next: Formats and runtimes →</a></nav>
+<nav class="course-nav" aria-label="Lesson navigation"><a href="0001-tensors-and-layers.html">← Previous: Tensors &amp; Layers</a><a href="../index.html">Course home</a><a href="0003-model-memory-and-context.html">Next: Model memory and context →</a></nav>
 <script src="../assets/quiz.js" defer></script>
 </body>
 </html>

@@ -3,11 +3,11 @@
 **Date:** 2026-07-15<br>
 **Branch:** `course-review-remediation`<br>
 **Published-course gate:** `python3 scripts/audit_course.py --allow-planned-lessons`<br>
-**Trial-dependent scope:** Lesson 5 and the result-bearing case study are intentionally deferred and were not represented as complete.
+**Trial-dependent scope:** Lessons 1–5 publish the practical method. Lesson 6, the result-bearing controlled case study, remains evidence-gated and planned.
 
 ## Environment and method
 
-- Served from `http://127.0.0.1:8765/` with Python's static HTTP server.
+- Served through a local static HTTP server during the recorded test run.
 - Used the Hermes local browser runtime for DOM, accessibility-tree, JavaScript, keyboard, responsive, and print-rule checks.
 - Emulated exact page viewports with same-origin iframes at **1280×900** and **390×844**; media queries and layout are evaluated against each iframe's own viewport.
 - Attempted a background native Safari capture, but `computer_use` returned no applications/windows. This is an automation-environment limitation, not a course defect; no Safari-specific result is claimed.
@@ -78,7 +78,7 @@ This is recorded as a tooling limitation rather than a visual pass in native Saf
 
 ## Automated corroboration
 
-- `python3 -m unittest discover -s tests -v`: **29/29 pass**.
+- `python3 -m unittest discover -s tests -v`: **52/52 pass** (refreshed 2026-07-18).
 - `python3 scripts/audit_course.py --allow-planned-lessons`: **pass with zero findings**.
 - `node --check assets/quiz.js`: **pass**.
 - The same commands passed from a detached clean Git worktree.

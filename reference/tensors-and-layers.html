@@ -28,7 +28,7 @@
 </tbody>
 </table>
 </div>
-<p>The same shape can serve different roles. A shape alone does not tell you whether a tensor is a learned parameter, a temporary activation, or retained runtime state.</p>
+<p>The same shape can serve different roles. A shape alone does not tell you whether a tensor is a learned <a class="glossary-link" href="glossary.html#parameter">parameter</a>, a temporary <a class="glossary-link" href="glossary.html#activation">activation</a>, or <a class="glossary-link" href="glossary.html#retained-runtime-state">retained runtime state</a>.</p>
 
 <h2>A complete next-token dataflow</h2>
 <p><strong>Architecture scope:</strong> this trace describes a decoder-only, Transformer-style language model with conventional token embeddings, attention/FFN blocks, and a vocabulary projection. Other architectures may replace attention, change retained state, or combine recurrent and attention paths.</p>
@@ -137,7 +137,7 @@
 <li>Repeat measurements and report variation instead of treating one sample as exact.</li>
 </ol>
 <p><strong>Sources:</strong> conventional cache mechanics and grouped-query attention are pinned in the <a href="../resources.html#canonical">canonical evidence ledger</a>. The formulas above are pedagogical derivations from those mechanics and must be re-parameterized for the exact architecture.</p>
-<div class="terms-footer"><p><strong>Terms in this reference:</strong> <a href="glossary.html#artifact">Model artifact</a> · <a href="glossary.html#inference-engine">Inference engine</a></p></div>
+<div class="terms-footer"><p><strong>Terms in this reference:</strong> <a href="glossary.html#artifact">Model artifact</a> · <a href="glossary.html#inference-engine">Inference engine</a> · <a href="glossary.html#parameter">Parameter</a> · <a href="glossary.html#activation">Activation</a> · <a href="glossary.html#retained-runtime-state">Retained runtime state</a></p></div>
 </main>
 <nav class="course-nav" aria-label="Footer"><a href="../index.html">← Course home</a><a href="quantization-decision-checklist.html">Decision checklist</a><a href="glossary.html">Glossary</a></nav>
 </body>
